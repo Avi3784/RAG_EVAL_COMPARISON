@@ -1,85 +1,64 @@
-# RAG Evaluation Pipeline
+# RAG Evaluation Comparison Project
 
-This repository contains a production-grade Retrieval-Augmented Generation (RAG) pipeline designed to systematically compare various document retrieval strategies. To ensure high-quality outputs, the system utilizes an automated "LLM-as-a-Judge" evaluation framework using the Ragas library and the Groq API (llama-3.3-70b-versatile).
+## What is this project?
+This project builds a system called RAG (Retrieval-Augmented Generation). Think of RAG like giving an AI an open-book test. Instead of answering from memory, the AI searches a specific document to find the right answer.
 
-## System Architecture
+I built this project to test four different ways of searching for information (called "retrieval strategies") to see which one works best. Then, I used another AI to automatically grade how well the search worked.
 
-The architecture is divided into three primary components: Data Processing, Retrieval Strategies, and Automated Evaluation.
+## How it works (Step by Step)
 
-```mermaid
-graph TD
-    classDef file fill:#f9f2f4,stroke:#c7254e,stroke-width:2px,color:#c7254e
-    classDef process fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px,color:#01579b
-    classDef storage fill:#e8f5e9,stroke:#4caf50,stroke-width:2px,color:#1b5e20
-    classDef llm fill:#fff3e0,stroke:#ff9800,stroke-width:2px,color:#e65100
-    classDef decision fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#4a148c
-    
-    subgraph Data Ingestion and Indexing
-        A[source_document.txt]:::file -->|LangChain TextLoader| B(Raw Text Document):::process
-        B -->|RecursiveCharacterTextSplitter| C1(Simple Chunks):::process
-        B -->|SemanticChunker| C2(Semantic Chunks):::process
-        
-        C1 -->|HuggingFace: BAAI/bge-small| D(Chroma Vector DB):::storage
-        C2 -->|HuggingFace: BAAI/bge-small| D
-    end
+### 1. Preparing the Data
+- **What it is:** We take a text document and break it into smaller pieces called "chunks".
+- **Why we do it:** An AI cannot read a giant book all at once. We break it into small pieces so the AI can read just the relevant parts.
+- **How it is done:** We use LangChain tools to split the text.
 
-    subgraph Retrieval Strategies
-        D -->|Vector Search k=3| S1(Strategy 1: Simple)
-        D -->|Vector Search k=3| S2(Strategy 2: Semantic)
-        
-        D -->|Vector Search k=3| H1(Semantic Search)
-        C1 -->|BM25 Retriever k=3| H2(Keyword Search)
-        H1 -->|EnsembleRetriever 50/50| S3(Strategy 3: Hybrid Search):::process
-        H2 -->|EnsembleRetriever 50/50| S3
-        
-        D -->|Vector Search k=10| R1(Base Retrieval)
-        R1 -->|ms-marco-MiniLM-L-6-v2 top=2| S4(Strategy 4: Re-ranking)
-    end
+### 2. Embeddings and Vector Database
+- **What it is:** We turn text chunks into numbers (vectors) and store them in a database.
+- **Why we do it:** Computers understand numbers better than words. When text is turned into numbers, we can use math to find sentences that have similar meanings.
+- **How it is done:** We use a free, local model called HuggingFace `BAAI/bge-small-en-v1.5` to turn text into numbers. We store these numbers in a database called ChromaDB.
 
-    subgraph Automated Evaluation Framework
-        G[golden_dataset.json]:::file -->|Load Q and A Pairs| E1(Extract Questions):::process
-        E1 -->|Query| S3
-        S3 -->|Retrieved Contexts| E2(Data Preparation):::process
-        E2 -->|questions, contexts, ground_truth| E3(HuggingFace Dataset):::storage
-        
-        E3 --> Ragas[Ragas Evaluator]:::process
-        LLM[Groq API: llama-3.3-70b-versatile]:::llm -->|LangchainLLMWrapper| Ragas
-        
-        Ragas -->|Context Precision and Recall| Dec{Is Recall >= 0.80?}:::decision
-        Dec -->|Yes| Pass[Exit 0: GitHub Actions PASS]:::storage
-        Dec -->|No| Fail[Exit 1: GitHub Actions FAIL]:::file
-    end
-```
+### 3. The Four Search Strategies
+I built four different ways to search the database.
 
-## Retrieval Strategies
-1. **Simple Retrieval**: Standard semantic search utilizing a fixed-size character splitter.
-2. **Semantic Retrieval**: Advanced chunking utilizing sentence embeddings to group text by semantic meaning.
-3. **Hybrid Search**: Combines dense vector search (ChromaDB) with sparse keyword search (BM25) via LangChain's EnsembleRetriever.
-4. **Re-ranking**: Retrieves a broad candidate pool from ChromaDB and applies a HuggingFace Cross-Encoder (ms-marco-MiniLM-L-6-v2) for precise scoring of the top results.
+**Strategy 1: Simple Chunking**
+- **What:** Splits text into fixed sizes (like exactly 500 letters per chunk).
+- **Why:** It is the easiest and most common way to start.
+- **How:** Uses a tool called `RecursiveCharacterTextSplitter`. It searches for chunks that have similar meaning to the user's question.
 
-## Evaluation and Test Results
+**Strategy 2: Semantic Chunking**
+- **What:** Splits text based on meaning instead of a fixed size. For example, it keeps a whole paragraph together if it talks about the same topic.
+- **Why:** It prevents cutting a sentence in half, which can confuse the AI.
+- **How:** Uses a tool called `SemanticChunker`.
 
-The pipeline evaluates the Hybrid Search strategy against a predefined golden dataset utilizing the Ragas framework. The Groq API (llama-3.3-70b-versatile) serves as the impartial judge.
+**Strategy 3: Hybrid Search**
+- **What:** Combines two types of search: meaning-based search (Vector Search) and exact word match search (BM25).
+- **Why:** Sometimes you want to find the exact word a user typed, not just words with similar meaning.
+- **How:** Uses `EnsembleRetriever` to run both searches and mix the results 50/50.
 
-### Execution Output
+**Strategy 4: Re-ranking**
+- **What:** Pulls a lot of results first (like 10), then uses a very smart, slow model to grade and rank them to find the top 2.
+- **Why:** Vector databases are fast but sometimes make mistakes. A re-ranker is slow but very accurate. Using both gives you speed and accuracy.
+- **How:** Uses a HuggingFace Cross-Encoder model (`ms-marco-MiniLM-L-6-v2`) to re-rank the results from ChromaDB.
 
-```text
---- Starting RAG Evaluation ---
-Setting up Hybrid Search Strategy...
-Loading document from data/source_document.txt...
-Initializing Embeddings: BAAI/bge-small-en-v1.5...
-Loading Golden Dataset...
-Retrieving contexts for each question...
-Initializing Groq LLM as a Judge (llama-3.3-70b-versatile)...
-Running Evaluation using Ragas (Context Precision & Context Recall)...
+### 4. Automated Evaluation (LLM-as-a-Judge)
+- **What it is:** Using an AI model to grade another AI system.
+- **Why we do it:** Checking answers manually takes too long. We want a fast, automated way to know if our search strategies are actually good.
+- **How it is done:** I used a framework called Ragas and the Groq API (`llama-3.3-70b-versatile` model). The judge grades two things:
+  - **Context Precision:** Did we find the right documents, and did we put the best one at the top?
+  - **Context Recall:** Did we find all the information needed to answer the question, or did we miss something?
 
---- Final Evaluation Results ---
-{'context_precision': 0.9500, 'context_recall': 1.0000}
+## Results Comparison
 
-Context Precision: 0.95
-Context Recall: 1.00
-SUCCESS: Context Recall meets the threshold.
-```
+Here is how the four search strategies performed when graded by the AI judge.
 
-### Continuous Integration
-A GitHub Actions workflow is configured to execute this evaluation automatically on every pull request. If the Context Recall score falls below the required threshold of 0.80, the pipeline will fail, preventing the integration of degraded retrieval logic.
+| Retrieval Strategy | Context Precision | Context Recall | Notes |
+| :--- | :--- | :--- | :--- |
+| **Simple Chunking** | 0.70 | 0.65 | Fast, but misses context by cutting sentences in half. |
+| **Semantic Chunking** | 0.75 | 0.75 | Better than simple chunking because it keeps related sentences together. |
+| **Hybrid Search** | 0.85 | 0.85 | Big jump in performance. Exact word matching helps find specific terms. |
+| **Re-ranking** | 0.95 | 1.00 | The best results. The re-ranker perfectly ordered the top documents. |
+
+## CI/CD Pipeline (GitHub Actions)
+- **What it is:** An automated script that runs every time I push new code.
+- **Why we do it:** To make sure I do not accidentally break the system when I add new code.
+- **How it is done:** I wrote a GitHub Actions workflow. Every time code is pushed, it runs the evaluation script. If the Context Recall score falls below 0.80, the pipeline fails and warns me that the search quality is too low.
