@@ -1,0 +1,27 @@
+[
+  {
+    "question": "How many days a week can employees work remotely?",
+    "ground_truth": "Employees can work remotely up to three days a week.",
+    "source_context": "Employees at Acme Corp are allowed to work remotely up to three days a week."
+  },
+  {
+    "question": "What are the core hours when working remotely?",
+    "ground_truth": "The core hours are from 10:00 AM to 3:00 PM in the employee's local time zone.",
+    "source_context": "However, employees must be available during core hours, which are from 10:00 AM to 3:00 PM in their local time zone."
+  },
+  {
+    "question": "How many days of paid time off (PTO) do full-time employees get?",
+    "ground_truth": "Full-time employees are entitled to 20 days of paid time off per calendar year.",
+    "source_context": "All full-time employees are entitled to 20 days of paid time off per calendar year."
+  },
+  {
+    "question": "Does unused PTO roll over to the next year?",
+    "ground_truth": "No, unused PTO does not roll over to the next year.",
+    "source_context": "Unused PTO does not roll over to the next year, so we encourage everyone to use their time."
+  },
+  {
+    "question": "What is the annual stipend for professional development?",
+    "ground_truth": "Every employee receives an annual stipend of $1,000 for professional development.",
+    "source_context": "Every employee receives an annual stipend of $1,000 to be used for professional development."
+  }
+]
