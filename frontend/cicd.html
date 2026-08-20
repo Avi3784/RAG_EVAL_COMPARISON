@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CI/CD Automated Guardrails | RAG.Eval</title>
+  <script src="theme.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -24,15 +25,20 @@
     }
   </script>
   <style>
-    body {
-      font-family: 'Geist', sans-serif;
+    body { font-family: 'Geist', sans-serif; }
+    .light-bg {
       background-color: #FAFAFA;
       background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
       background-size: 24px 24px;
     }
+    .dark .light-bg {
+      background-color: #030712;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+    }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
     
     .spotlight-card {
       position: relative;
@@ -42,39 +48,51 @@
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
     }
+    .dark .spotlight-card {
+      background: rgba(15, 23, 42, 0.75);
+      border-color: rgba(30, 41, 59, 0.9);
+    }
     .spotlight-card:hover {
       border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
       box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
     }
+    .dark .spotlight-card:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    }
   </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+<body class="light-bg text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white dark:selection:bg-blue-600 transition-colors duration-300">
 
   <!-- Interactive Background Canvas -->
-  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"></canvas>
 
   <!-- Top Navigation -->
-  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white dark:text-slate-950 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
-          <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
-          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">v1.0.4</span>
+          <span class="text-base font-semibold tracking-tight text-slate-900 dark:text-white">RAG.Eval</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700">v1.0.4</span>
         </a>
-        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
-          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
-          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Strategies</a>
-          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
-          <a href="document.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Source Document</a>
-          <a href="cicd.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">CI/CD Guardrails</a>
+        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200 dark:border-slate-800">
+          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Overview</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Strategies</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Evaluation Runs</a>
+          <a href="document.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Source Document</a>
+          <a href="cicd.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-md transition-all shadow-xs">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <div class="flex items-center space-x-2 text-xs font-mono bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200">
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" id="themeToggleBtn" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-xs">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+        <div class="flex items-center space-x-2 text-xs font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>GitHub Actions Active</span>
         </div>
@@ -86,21 +104,21 @@
   <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
       <div>
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 mb-2">
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 mb-2">
           <i data-lucide="git-pull-request" class="w-3.5 h-3.5 animate-bounce"></i>
           <span>Automated Quality Gate</span>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">CI/CD Pipeline &amp; Guardrails</h1>
-        <p class="text-sm text-slate-500 mt-1">Every Pull Request automatically executes `evaluate.py` to prevent degraded retrieval models from shipping.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">CI/CD Pipeline &amp; Guardrails</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Every Pull Request automatically executes `evaluate.py` to prevent degraded retrieval models from shipping.</p>
       </div>
       <div class="flex items-center space-x-3">
-        <button onclick="simulatePRAnimated('pass')" id="simulatePassBtn" class="px-4 py-2 text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 shadow-xs hover:shadow transition-all flex items-center gap-1.5 active:scale-95 hover:scale-105">
+        <button onclick="simulatePRAnimated('pass')" id="simulatePassBtn" class="px-4 py-2 text-xs font-semibold bg-slate-900 dark:bg-blue-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-blue-500 shadow-xs hover:shadow transition-all flex items-center gap-1.5 active:scale-95 hover:scale-105">
           <i data-lucide="play" class="w-3.5 h-3.5 text-emerald-400"></i>
           <span>Simulate PR (Passing Model)</span>
         </button>
-        <button onclick="simulatePRAnimated('fail')" id="simulateFailBtn" class="px-4 py-2 text-xs font-semibold bg-white border border-rose-200 text-rose-700 rounded-lg hover:bg-rose-50 shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:scale-105">
+        <button onclick="simulatePRAnimated('fail')" id="simulateFailBtn" class="px-4 py-2 text-xs font-semibold bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 shadow-xs transition-all flex items-center gap-1.5 active:scale-95 hover:scale-105">
           <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-500"></i>
           <span>Simulate Regression (&lt;0.80)</span>
         </button>
@@ -109,73 +127,73 @@
 
     <!-- Pipeline Steps Visualization -->
     <div class="spotlight-card rounded-xl p-6 shadow-xs">
-      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">GitHub Actions Workflow: `.github/workflows/rag-eval.yml`</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Execution graph triggered on `pull_request` to `main`</p>
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">GitHub Actions Workflow: `.github/workflows/rag-eval.yml`</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Execution graph triggered on `pull_request` to `main`</p>
         </div>
-        <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded">ubuntu-latest • Python 3.10</span>
+        <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700">ubuntu-latest • Python 3.10</span>
       </div>
 
       <!-- Step Cards Pipeline -->
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-6">
         
         <!-- Step 1 -->
-        <div id="step-1" class="p-4 rounded-xl border border-slate-200 bg-white shadow-xs transition-all hover:scale-105">
+        <div id="step-1" class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-xs transition-all hover:scale-105">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-mono font-bold text-slate-400">STEP 1</span>
-            <div id="step-icon-1" class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <span class="text-[11px] font-mono font-bold text-slate-400 dark:text-slate-500">STEP 1</span>
+            <div id="step-icon-1" class="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
               <i data-lucide="check" class="w-3.5 h-3.5"></i>
             </div>
           </div>
-          <div class="text-xs font-semibold text-slate-900 mt-2">actions/checkout@v4</div>
-          <p class="text-[11px] text-slate-500 mt-1">Clones repository into ephemeral runner</p>
-          <div class="mt-3 text-[10px] font-mono text-slate-400">Duration: 2.1s</div>
+          <div class="text-xs font-semibold text-slate-900 dark:text-white mt-2">actions/checkout@v4</div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Clones repository into ephemeral runner</p>
+          <div class="mt-3 text-[10px] font-mono text-slate-400 dark:text-slate-500">Duration: 2.1s</div>
         </div>
 
         <!-- Step 2 -->
-        <div id="step-2" class="p-4 rounded-xl border border-slate-200 bg-white shadow-xs transition-all hover:scale-105">
+        <div id="step-2" class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-xs transition-all hover:scale-105">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-mono font-bold text-slate-400">STEP 2</span>
-            <div id="step-icon-2" class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <span class="text-[11px] font-mono font-bold text-slate-400 dark:text-slate-500">STEP 2</span>
+            <div id="step-icon-2" class="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
               <i data-lucide="check" class="w-3.5 h-3.5"></i>
             </div>
           </div>
-          <div class="text-xs font-semibold text-slate-900 mt-2">Setup Python &amp; Pip</div>
-          <p class="text-[11px] text-slate-500 mt-1">Installs LangChain, Chroma, Ragas, Groq</p>
-          <div class="mt-3 text-[10px] font-mono text-slate-400">Duration: 14.8s</div>
+          <div class="text-xs font-semibold text-slate-900 dark:text-white mt-2">Setup Python &amp; Pip</div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Installs LangChain, Chroma, Ragas, Groq</p>
+          <div class="mt-3 text-[10px] font-mono text-slate-400 dark:text-slate-500">Duration: 14.8s</div>
         </div>
 
         <!-- Step 3 -->
-        <div id="step-3" class="p-4 rounded-xl border border-slate-200 bg-white shadow-xs transition-all hover:scale-105">
+        <div id="step-3" class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-xs transition-all hover:scale-105">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-mono font-bold text-slate-400">STEP 3</span>
-            <div id="step-icon-3" class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <span class="text-[11px] font-mono font-bold text-slate-400 dark:text-slate-500">STEP 3</span>
+            <div id="step-icon-3" class="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
               <i data-lucide="check" class="w-3.5 h-3.5"></i>
             </div>
           </div>
-          <div class="text-xs font-semibold text-slate-900 mt-2">Inject Secret</div>
-          <p class="text-[11px] text-slate-500 mt-1">`GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}`</p>
-          <div class="mt-3 text-[10px] font-mono text-slate-400">Status: Injected</div>
+          <div class="text-xs font-semibold text-slate-900 dark:text-white mt-2">Inject Secret</div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">`GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}`</p>
+          <div class="mt-3 text-[10px] font-mono text-slate-400 dark:text-slate-500">Status: Injected</div>
         </div>
 
         <!-- Step 4 -->
-        <div id="step-4" class="p-4 rounded-xl border border-slate-200 bg-white shadow-xs transition-all hover:scale-105">
+        <div id="step-4" class="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 shadow-xs transition-all hover:scale-105">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-mono font-bold text-slate-400">STEP 4</span>
-            <div id="step-icon-4" class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <span class="text-[11px] font-mono font-bold text-slate-400 dark:text-slate-500">STEP 4</span>
+            <div id="step-icon-4" class="w-5 h-5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
               <i data-lucide="check" class="w-3.5 h-3.5"></i>
             </div>
           </div>
-          <div class="text-xs font-semibold text-slate-900 mt-2">Run evaluate.py</div>
-          <p class="text-[11px] text-slate-500 mt-1" id="step4Desc">Grades Context Recall &ge; 0.80</p>
-          <div class="mt-3 text-[10px] font-mono font-bold text-emerald-600" id="step4Status">Exit Code: 0 (PASS)</div>
+          <div class="text-xs font-semibold text-slate-900 dark:text-white mt-2">Run evaluate.py</div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1" id="step4Desc">Grades Context Recall &ge; 0.80</p>
+          <div class="mt-3 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400" id="step4Status">Exit Code: 0 (PASS)</div>
         </div>
 
       </div>
 
       <!-- Live Terminal Output -->
-      <div class="mt-6 p-4 rounded-lg bg-slate-900 text-slate-200 font-mono text-xs overflow-x-auto space-y-1 shadow-inner" id="ciTerminal">
+      <div class="mt-6 p-4 rounded-lg bg-slate-900 text-slate-200 font-mono text-xs overflow-x-auto space-y-1 shadow-inner border border-slate-800" id="ciTerminal">
         <div><span class="text-slate-500">Run python evaluate.py</span></div>
         <div>--- Starting RAG Evaluation ---</div>
         <div>Setting up Hybrid Search Strategy...</div>
@@ -192,11 +210,11 @@
 
     <!-- YAML Config Inspector -->
     <div class="spotlight-card rounded-xl p-6 shadow-xs">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h2 class="text-base font-semibold text-slate-900">Workflow YAML Configuration</h2>
-        <span class="text-xs text-slate-500 font-mono">.github/workflows/rag-eval.yml</span>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <h2 class="text-base font-semibold text-slate-900 dark:text-white">Workflow YAML Configuration</h2>
+        <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">.github/workflows/rag-eval.yml</span>
       </div>
-      <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
+      <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner border border-slate-800">
         <pre><code>name: RAG Evaluation Pipeline
 
 on:
@@ -248,8 +266,9 @@ jobs:
 
     function animate() {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
-      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+      const isDark = document.documentElement.classList.contains('dark');
+      ctx.fillStyle = isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(203, 213, 225, 0.3)';
 
       particles.forEach((p, i) => {
         p.x += p.vx;
@@ -292,10 +311,10 @@ jobs:
 
       setTimeout(() => {
         if (mode === 'pass') {
-          step4.className = "p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-md transition-all scale-105";
-          step4Icon.className = "w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs";
+          step4.className = "p-4 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/40 shadow-md transition-all scale-105";
+          step4Icon.className = "w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-xs";
           step4Icon.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i>`;
-          step4Status.className = "mt-3 text-[10px] font-mono font-bold text-emerald-600";
+          step4Status.className = "mt-3 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400";
           step4Status.innerText = "Exit Code: 0 (PASS)";
 
           terminal.innerHTML += `
@@ -303,17 +322,16 @@ jobs:
             <div class="text-emerald-400 font-bold">SUCCESS: Context Recall meets the 0.80 threshold. Pipeline Passed!</div>
           `;
 
-          // Trigger confetti
           confetti({
             particleCount: 50,
             spread: 60,
             origin: { y: 0.6 }
           });
         } else {
-          step4.className = "p-4 rounded-xl border border-rose-300 bg-rose-50/70 shadow-md transition-all scale-105";
-          step4Icon.className = "w-5 h-5 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs";
+          step4.className = "p-4 rounded-xl border border-rose-300 dark:border-rose-700 bg-rose-50/70 dark:bg-rose-950/40 shadow-md transition-all scale-105";
+          step4Icon.className = "w-5 h-5 rounded-full bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300 flex items-center justify-center text-xs";
           step4Icon.innerHTML = `<i data-lucide="x" class="w-3.5 h-3.5"></i>`;
-          step4Status.className = "mt-3 text-[10px] font-mono font-bold text-rose-600";
+          step4Status.className = "mt-3 text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400";
           step4Status.innerText = "Exit Code: 1 (FAILED)";
 
           terminal.innerHTML += `

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Source Document & Golden Dataset | RAG.Eval</title>
+  <script src="theme.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -22,15 +24,20 @@
     }
   </script>
   <style>
-    body {
-      font-family: 'Geist', sans-serif;
+    body { font-family: 'Geist', sans-serif; }
+    .light-bg {
       background-color: #FAFAFA;
       background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
       background-size: 24px 24px;
     }
+    .dark .light-bg {
+      background-color: #030712;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+    }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
     
     .spotlight-card {
       position: relative;
@@ -40,39 +47,68 @@
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
     }
+    .dark .spotlight-card {
+      background: rgba(15, 23, 42, 0.75);
+      border-color: rgba(30, 41, 59, 0.9);
+    }
+    .spotlight-card::before {
+      content: '';
+      position: absolute;
+      top: var(--mouse-y, 0);
+      left: var(--mouse-x, 0);
+      transform: translate(-50%, -50%);
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .dark .spotlight-card::before {
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%);
+    }
+    .spotlight-card:hover::before { opacity: 1; }
     .spotlight-card:hover {
       border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
       box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
     }
+    .dark .spotlight-card:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    }
   </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+<body class="light-bg text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white dark:selection:bg-blue-600 transition-colors duration-300">
 
   <!-- Interactive Background Canvas -->
-  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"></canvas>
 
   <!-- Top Navigation -->
-  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white dark:text-slate-950 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
-          <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
-          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">v1.0.4</span>
+          <span class="text-base font-semibold tracking-tight text-slate-900 dark:text-white">RAG.Eval</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700">v1.0.4</span>
         </a>
-        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
-          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
-          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Strategies</a>
-          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
-          <a href="document.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Source Document</a>
-          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
+        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200 dark:border-slate-800">
+          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Overview</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Strategies</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Evaluation Runs</a>
+          <a href="document.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-md transition-all shadow-xs">Source Document</a>
+          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON/tree/main/data" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all hover:scale-105 active:scale-95">
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" id="themeToggleBtn" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-xs">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON/tree/main/data" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all hover:scale-105 active:scale-95">
           <i data-lucide="folder-git" class="w-3.5 h-3.5"></i>
           <span>View on GitHub (/data)</span>
         </a>
@@ -84,17 +120,17 @@
   <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
       <div>
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
-          <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-600"></i>
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 mb-2">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
           <span>Corpus &amp; Ground Truth</span>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Source Document &amp; Golden Dataset</h1>
-        <p class="text-sm text-slate-500 mt-1">The official corporate HR policy document indexed by ChromaDB and tested against 5 verified Q&amp;A evaluation pairs.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Source Document &amp; Golden Dataset</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">The official corporate HR policy document indexed by ChromaDB and tested against 5 verified Q&amp;A evaluation pairs.</p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2.5 py-1 rounded border border-slate-200">data/source_document.txt</span>
+        <span class="text-xs text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700">data/source_document.txt</span>
       </div>
     </div>
 
@@ -104,17 +140,17 @@
       <!-- Source Document Viewer (7 cols) -->
       <div class="lg:col-span-7 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-2">
-              <div class="p-1.5 rounded-md bg-slate-100 text-slate-700">
+              <div class="p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 <i data-lucide="book-open" class="w-4 h-4"></i>
               </div>
               <div>
-                <h2 class="text-base font-semibold text-slate-900">Acme Corp Employee Handbook</h2>
-                <p class="text-xs text-slate-500 font-mono">source_document.txt • 1,433 bytes • 3 Policy Paragraphs</p>
+                <h2 class="text-base font-semibold text-slate-900 dark:text-white">Acme Corp Employee Handbook</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-mono">source_document.txt • 1,433 bytes • 3 Policy Paragraphs</p>
               </div>
             </div>
-            <button onclick="copyDocument()" id="copyDocBtn" class="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-all flex items-center gap-1">
+            <button onclick="copyDocument()" id="copyDocBtn" class="px-2.5 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded transition-all flex items-center gap-1">
               <i data-lucide="copy" class="w-3 h-3"></i>
               <span>Copy Text</span>
             </button>
@@ -124,37 +160,37 @@
           <div class="mt-5 space-y-4 text-xs leading-relaxed" id="documentContent">
             
             <!-- Paragraph 1 -->
-            <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
-              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-2">
-                <span class="font-bold text-slate-700 uppercase">Section 01: Remote Work Policy</span>
-                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px]">Chunk ID #1</span>
+            <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-all">
+              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 dark:text-slate-500 mb-2">
+                <span class="font-bold text-slate-700 dark:text-slate-300 uppercase">Section 01: Remote Work Policy</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[10px]">Chunk ID #1</span>
               </div>
-              <p class="text-slate-800">
+              <p class="text-slate-800 dark:text-slate-200">
                 Welcome to the Acme Corp Employee Handbook. This document outlines our company policies regarding remote work, paid time off, and professional development.
               </p>
-              <p class="text-slate-800 mt-2 font-medium">
+              <p class="text-slate-800 dark:text-slate-200 mt-2 font-medium">
                 Employees at Acme Corp are allowed to work remotely up to three days a week. We believe in a flexible work environment that promotes work-life balance. However, employees must be available during core hours, which are from 10:00 AM to 3:00 PM in their local time zone. When working remotely, employees are expected to maintain a secure internet connection and ensure that company data is protected at all times.
               </p>
             </div>
 
             <!-- Paragraph 2 -->
-            <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
-              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-2">
-                <span class="font-bold text-slate-700 uppercase">Section 02: Paid Time Off (PTO)</span>
-                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px]">Chunk ID #2</span>
+            <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-all">
+              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 dark:text-slate-500 mb-2">
+                <span class="font-bold text-slate-700 dark:text-slate-300 uppercase">Section 02: Paid Time Off (PTO)</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[10px]">Chunk ID #2</span>
               </div>
-              <p class="text-slate-800">
+              <p class="text-slate-800 dark:text-slate-200">
                 All full-time employees are entitled to 20 days of paid time off per calendar year. This PTO can be used for vacation, personal days, or sick leave. Unused PTO does not roll over to the next year, so we encourage everyone to use their time. In addition to regular PTO, the company observes 10 public holidays. Requests for time off should be submitted through the HR portal at least two weeks in advance for planned vacations.
               </p>
             </div>
 
             <!-- Paragraph 3 -->
-            <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
-              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-2">
-                <span class="font-bold text-slate-700 uppercase">Section 03: Professional Development</span>
-                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px]">Chunk ID #3</span>
+            <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition-all">
+              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 dark:text-slate-500 mb-2">
+                <span class="font-bold text-slate-700 dark:text-slate-300 uppercase">Section 03: Professional Development</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[10px]">Chunk ID #3</span>
               </div>
-              <p class="text-slate-800">
+              <p class="text-slate-800 dark:text-slate-200">
                 Acme Corp is committed to the growth of its employees. Every employee receives an annual stipend of $1,000 to be used for professional development. This can include attending conferences, taking online courses, or purchasing books related to their field. To claim this stipend, employees must submit a proposal to their manager and provide receipts for reimbursement.
               </p>
             </div>
@@ -162,91 +198,91 @@
           </div>
         </div>
 
-        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Loaded via: <strong class="text-slate-800">LangChain TextLoader</strong></span>
-          <span>Embeddings: <strong class="text-slate-800">BAAI/bge-small-en-v1.5</strong></span>
+        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Loaded via: <strong class="text-slate-800 dark:text-slate-200">LangChain TextLoader</strong></span>
+          <span>Embeddings: <strong class="text-slate-800 dark:text-slate-200">BAAI/bge-small-en-v1.5</strong></span>
         </div>
       </div>
 
       <!-- Golden Dataset Viewer (5 cols) -->
       <div class="lg:col-span-5 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h2 class="text-base font-semibold text-slate-900">Golden Dataset (5 Q&amp;A Pairs)</h2>
-              <p class="text-xs text-slate-500 font-mono">golden_dataset.json • Ragas Ground Truth</p>
+              <h2 class="text-base font-semibold text-slate-900 dark:text-white">Golden Dataset (5 Q&amp;A Pairs)</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 font-mono">golden_dataset.json • Ragas Ground Truth</p>
             </div>
-            <span class="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 font-semibold">5 Verified</span>
+            <span class="text-xs font-mono bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 font-semibold">5 Verified</span>
           </div>
 
           <!-- Q&A Pair List -->
           <div class="mt-4 space-y-3 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
             
             <!-- QA 1 -->
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
-              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span class="font-bold text-slate-800">Q1</span>
-                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 rounded-lg text-xs space-y-1.5 hover:border-slate-400 dark:hover:border-slate-500 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="font-bold text-slate-800 dark:text-white">Q1</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Recall: 1.00</span>
               </div>
-              <div class="font-semibold text-slate-900">How many days a week can employees work remotely?</div>
-              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
-                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"Employees can work remotely up to three days a week."
+              <div class="font-semibold text-slate-900 dark:text-white">How many days a week can employees work remotely?</div>
+              <div class="text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-900/60 p-2 rounded border border-slate-200/60 dark:border-slate-700/60">
+                <span class="font-semibold text-slate-800 dark:text-white not-italic">Ground Truth: </span>"Employees can work remotely up to three days a week."
               </div>
             </div>
 
             <!-- QA 2 -->
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
-              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span class="font-bold text-slate-800">Q2</span>
-                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 rounded-lg text-xs space-y-1.5 hover:border-slate-400 dark:hover:border-slate-500 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="font-bold text-slate-800 dark:text-white">Q2</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Recall: 1.00</span>
               </div>
-              <div class="font-semibold text-slate-900">What are the core hours when working remotely?</div>
-              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
-                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"The core hours are from 10:00 AM to 3:00 PM in the employee's local time zone."
+              <div class="font-semibold text-slate-900 dark:text-white">What are the core hours when working remotely?</div>
+              <div class="text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-900/60 p-2 rounded border border-slate-200/60 dark:border-slate-700/60">
+                <span class="font-semibold text-slate-800 dark:text-white not-italic">Ground Truth: </span>"The core hours are from 10:00 AM to 3:00 PM in the employee's local time zone."
               </div>
             </div>
 
             <!-- QA 3 -->
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
-              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span class="font-bold text-slate-800">Q3</span>
-                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 rounded-lg text-xs space-y-1.5 hover:border-slate-400 dark:hover:border-slate-500 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="font-bold text-slate-800 dark:text-white">Q3</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Recall: 1.00</span>
               </div>
-              <div class="font-semibold text-slate-900">How many days of paid time off (PTO) do full-time employees get?</div>
-              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
-                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"Full-time employees are entitled to 20 days of paid time off per calendar year."
+              <div class="font-semibold text-slate-900 dark:text-white">How many days of paid time off (PTO) do full-time employees get?</div>
+              <div class="text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-900/60 p-2 rounded border border-slate-200/60 dark:border-slate-700/60">
+                <span class="font-semibold text-slate-800 dark:text-white not-italic">Ground Truth: </span>"Full-time employees are entitled to 20 days of paid time off per calendar year."
               </div>
             </div>
 
             <!-- QA 4 -->
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
-              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span class="font-bold text-slate-800">Q4</span>
-                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 rounded-lg text-xs space-y-1.5 hover:border-slate-400 dark:hover:border-slate-500 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="font-bold text-slate-800 dark:text-white">Q4</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Recall: 1.00</span>
               </div>
-              <div class="font-semibold text-slate-900">Does unused PTO roll over to the next year?</div>
-              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
-                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"No, unused PTO does not roll over to the next year."
+              <div class="font-semibold text-slate-900 dark:text-white">Does unused PTO roll over to the next year?</div>
+              <div class="text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-900/60 p-2 rounded border border-slate-200/60 dark:border-slate-700/60">
+                <span class="font-semibold text-slate-800 dark:text-white not-italic">Ground Truth: </span>"No, unused PTO does not roll over to the next year."
               </div>
             </div>
 
             <!-- QA 5 -->
-            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
-              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span class="font-bold text-slate-800">Q5</span>
-                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+            <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700 rounded-lg text-xs space-y-1.5 hover:border-slate-400 dark:hover:border-slate-500 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span class="font-bold text-slate-800 dark:text-white">Q5</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Recall: 1.00</span>
               </div>
-              <div class="font-semibold text-slate-900">What is the annual stipend for professional development?</div>
-              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
-                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"Every employee receives an annual stipend of $1,000 for professional development."
+              <div class="font-semibold text-slate-900 dark:text-white">What is the annual stipend for professional development?</div>
+              <div class="text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-900/60 p-2 rounded border border-slate-200/60 dark:border-slate-700/60">
+                <span class="font-semibold text-slate-800 dark:text-white not-italic">Ground Truth: </span>"Every employee receives an annual stipend of $1,000 for professional development."
               </div>
             </div>
 
           </div>
         </div>
 
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <a href="index.html" class="text-xs font-semibold text-slate-900 hover:text-blue-600 flex items-center gap-1">
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <a href="index.html" class="text-xs font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
             <span>Test in Playground</span>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
           </a>
@@ -296,8 +332,9 @@
 
     function animate() {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
-      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+      const isDark = document.documentElement.classList.contains('dark');
+      ctx.fillStyle = isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(203, 213, 225, 0.3)';
 
       particles.forEach((p, i) => {
         p.x += p.vx;
@@ -329,7 +366,7 @@
       
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copyDocBtn');
-        btn.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-600"></i><span>Copied!</span>`;
+        btn.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-600 dark:text-emerald-400"></i><span>Copied!</span>`;
         lucide.createIcons();
         setTimeout(() => {
           btn.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i><span>Copy Text</span>`;

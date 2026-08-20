@@ -4,13 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RAG.Eval | Production Retrieval Benchmarks</title>
+  <!-- Theme initialization script (flicker-free) -->
+  <script src="theme.js"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Canvas Confetti for celebrations -->
+  <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -27,7 +30,6 @@
           animation: {
             'fade-in': 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'float-slow': 'floatSlow 4s ease-in-out infinite',
             'shimmer': 'shimmer 2.5s infinite linear',
             'glow-pulse': 'glowPulse 2s infinite ease-in-out',
             'spin-slow': 'spin 12s linear infinite',
@@ -35,10 +37,6 @@
           keyframes: {
             fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
             slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-            floatSlow: {
-              '0%, 100%': { transform: 'translateY(0px)' },
-              '50%': { transform: 'translateY(-6px)' }
-            },
             shimmer: {
               '0%': { transform: 'translateX(-100%)' },
               '100%': { transform: 'translateX(100%)' }
@@ -55,14 +53,20 @@
   <style>
     body {
       font-family: 'Geist', sans-serif;
+    }
+    .light-bg {
       background-color: #FAFAFA;
       background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
       background-size: 24px 24px;
-      overflow-x: hidden;
+    }
+    .dark .light-bg {
+      background-color: #030712;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
     }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
     
     /* Interactive Mouse Spotlight Card */
     .spotlight-card {
@@ -72,6 +76,10 @@
       border: 1px solid rgba(226, 232, 240, 0.9);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
+    }
+    .dark .spotlight-card {
+      background: rgba(15, 23, 42, 0.75);
+      border-color: rgba(30, 41, 59, 0.9);
     }
     .spotlight-card::before {
       content: '';
@@ -86,16 +94,20 @@
       transition: opacity 0.3s ease;
       pointer-events: none;
     }
-    .spotlight-card:hover::before {
-      opacity: 1;
+    .dark .spotlight-card::before {
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%);
     }
+    .spotlight-card:hover::before { opacity: 1; }
     .spotlight-card:hover {
       border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
       box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
     }
+    .dark .spotlight-card:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    }
 
-    /* Shimmer Button */
     .shimmer-btn {
       position: relative;
       overflow: hidden;
@@ -115,36 +127,41 @@
     }
   </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+<body class="light-bg text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white dark:selection:bg-blue-600 transition-colors duration-300">
 
   <!-- Interactive Vector Network Background Canvas -->
-  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"></canvas>
 
   <!-- Top Navigation -->
-  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80 transition-all">
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white dark:text-slate-950 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
-          <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
-          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200 animate-pulse">v1.0.4</span>
+          <span class="text-base font-semibold tracking-tight text-slate-900 dark:text-white">RAG.Eval</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700 animate-pulse">v1.0.4</span>
         </a>
-        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
-          <a href="index.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Overview</a>
-          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Strategies</a>
-          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
-          <a href="document.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Source Document</a>
-          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
+        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200 dark:border-slate-800">
+          <a href="index.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-md transition-all shadow-xs">Overview</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Strategies</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Evaluation Runs</a>
+          <a href="document.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Source Document</a>
+          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <div class="flex items-center space-x-2 text-xs font-mono bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-xs animate-glow-pulse">
+        <!-- Light / Dark Mode Toggle Button -->
+        <button onclick="toggleTheme()" id="themeToggleBtn" aria-label="Toggle Light and Dark Mode" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-xs">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+
+        <div class="flex items-center space-x-2 text-xs font-mono bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800 shadow-xs animate-glow-pulse">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
           <span>Recall: 1.00 (Passed)</span>
         </div>
-        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs hover:shadow transition-all active:scale-95">
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs hover:shadow transition-all active:scale-95">
           <i data-lucide="github" class="w-3.5 h-3.5"></i>
           <span>GitHub</span>
         </a>
@@ -156,94 +173,94 @@
   <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
     
     <!-- Hero / Headline -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
       <div>
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 mb-2">
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 mb-2">
           <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-500 animate-spin-slow"></i>
           <span>Interactive Benchmark Suite &amp; LLM Judge</span>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Retrieval &amp; Evaluation Benchmarks</h1>
-        <p class="text-sm text-slate-500 mt-1">Comparing 4 retrieval algorithms evaluated with Ragas and Groq Llama-3.3-70B.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Retrieval &amp; Evaluation Benchmarks</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Comparing 4 retrieval algorithms evaluated with Ragas and Groq Llama-3.3-70B.</p>
       </div>
       <div class="flex items-center space-x-3">
-        <a href="strategies.html" class="px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:border-slate-300 shadow-xs hover:shadow transition-all flex items-center gap-1.5 hover:-translate-y-0.5">
-          <i data-lucide="layers" class="w-4 h-4 text-slate-500"></i>
+        <a href="strategies.html" class="px-3.5 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-slate-300 shadow-xs hover:shadow transition-all flex items-center gap-1.5 hover:-translate-y-0.5">
+          <i data-lucide="layers" class="w-4 h-4 text-slate-500 dark:text-slate-400"></i>
           <span>Inspect Strategies</span>
         </a>
-        <button onclick="runCelebrationEval()" id="runEvalBtn" class="shimmer-btn flex items-center space-x-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 hover:-translate-y-0.5">
+        <button onclick="runCelebrationEval()" id="runEvalBtn" class="shimmer-btn flex items-center space-x-2 text-sm font-medium text-white bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-500 px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 hover:-translate-y-0.5">
           <i data-lucide="play" class="w-4 h-4 text-emerald-400"></i>
           <span>Run Evaluation Pipeline</span>
         </button>
       </div>
     </div>
 
-    <!-- Row 1: KPI Metrics with animated numbers and mouse spotlight -->
+    <!-- Row 1: KPI Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- Metric 1 -->
       <div class="spotlight-card rounded-xl p-5 shadow-xs">
-        <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
           <span>CONTEXT PRECISION</span>
-          <div class="p-1.5 rounded-md bg-slate-100 text-slate-600">
+          <div class="p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
             <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-3xl font-bold tracking-tight text-slate-900 counter" data-target="0.95">0.00</span>
-          <span class="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">+12% vs simple</span>
+          <span class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white counter" data-target="0.95">0.00</span>
+          <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">+12% vs simple</span>
         </div>
-        <div class="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-          <div class="bg-slate-900 h-full rounded-full transition-all duration-1000" style="width: 95%"></div>
+        <div class="mt-3 w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div class="bg-slate-900 dark:bg-blue-500 h-full rounded-full transition-all duration-1000" style="width: 95%"></div>
         </div>
       </div>
 
       <!-- Metric 2 -->
       <div class="spotlight-card rounded-xl p-5 shadow-xs">
-        <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
           <span>CONTEXT RECALL</span>
-          <div class="p-1.5 rounded-md bg-emerald-50 text-emerald-600">
+          <div class="p-1.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
             <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-3xl font-bold tracking-tight text-slate-900 counter" data-target="1.00">0.00</span>
-          <span class="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Threshold: &gt;0.80</span>
+          <span class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white counter" data-target="1.00">0.00</span>
+          <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">Threshold: &gt;0.80</span>
         </div>
-        <div class="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+        <div class="mt-3 w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
           <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: 100%"></div>
         </div>
       </div>
 
       <!-- Metric 3 -->
       <div class="spotlight-card rounded-xl p-5 shadow-xs">
-        <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
           <span>AVG RETRIEVAL LATENCY</span>
-          <div class="p-1.5 rounded-md bg-blue-50 text-blue-600">
+          <div class="p-1.5 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
             <i data-lucide="zap" class="w-3.5 h-3.5"></i>
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-3xl font-bold tracking-tight text-slate-900"><span class="counter" data-target="42">0</span><span class="text-lg font-normal text-slate-500">ms</span></span>
-          <span class="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Local BGE-Small</span>
+          <span class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white"><span class="counter" data-target="42">0</span><span class="text-lg font-normal text-slate-500 dark:text-slate-400">ms</span></span>
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">Local BGE-Small</span>
         </div>
-        <div class="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+        <div class="mt-3 w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
           <div class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width: 35%"></div>
         </div>
       </div>
 
       <!-- Metric 4 -->
       <div class="spotlight-card rounded-xl p-5 shadow-xs">
-        <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
+        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
           <span>EVALUATION JUDGE COST</span>
-          <div class="p-1.5 rounded-md bg-amber-50 text-amber-600">
+          <div class="p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
             <i data-lucide="coins" class="w-3.5 h-3.5"></i>
           </div>
         </div>
         <div class="mt-3 flex items-baseline justify-between">
-          <span class="text-3xl font-bold tracking-tight text-slate-900">$0.00</span>
-          <span class="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Groq Free Tier</span>
+          <span class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">$0.00</span>
+          <span class="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">Groq Free Tier</span>
         </div>
-        <div class="mt-3 text-xs text-slate-500 font-mono flex items-center gap-1">
+        <div class="mt-3 text-xs text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1">
           <span>Judge: Llama-3.3-70B</span>
         </div>
       </div>
@@ -256,12 +273,12 @@
       <!-- Strategy Selector & Details (7 cols) -->
       <div class="lg:col-span-7 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h2 class="text-base font-semibold text-slate-900">Retrieval Strategies Workbench</h2>
-              <p class="text-xs text-slate-500 mt-0.5">Click each strategy to inspect its inner mechanism &amp; benchmarks</p>
+              <h2 class="text-base font-semibold text-slate-900 dark:text-white">Retrieval Strategies Workbench</h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Click each strategy to inspect its inner mechanism &amp; benchmarks</p>
             </div>
-            <a href="strategies.html" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:translate-x-0.5 transition-transform">
+            <a href="strategies.html" class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1 hover:translate-x-0.5 transition-transform">
               <span>Deep Dive</span>
               <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
             </a>
@@ -269,56 +286,56 @@
 
           <!-- Strategy Tabs -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-            <button onclick="selectStrategy('simple')" id="tab-simple" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02]">
-              <div class="text-xs font-semibold text-slate-900">1. Simple</div>
-              <div class="text-[11px] text-slate-500 mt-0.5">Fixed Chunks</div>
+            <button onclick="selectStrategy('simple')" id="tab-simple" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 transition-all hover:scale-[1.02]">
+              <div class="text-xs font-semibold text-slate-900 dark:text-white">1. Simple</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Fixed Chunks</div>
             </button>
-            <button onclick="selectStrategy('semantic')" id="tab-semantic" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02]">
-              <div class="text-xs font-semibold text-slate-900">2. Semantic</div>
-              <div class="text-[11px] text-slate-500 mt-0.5">Meaning Split</div>
+            <button onclick="selectStrategy('semantic')" id="tab-semantic" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 transition-all hover:scale-[1.02]">
+              <div class="text-xs font-semibold text-slate-900 dark:text-white">2. Semantic</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Meaning Split</div>
             </button>
-            <button onclick="selectStrategy('hybrid')" id="tab-hybrid" class="strategy-tab p-3 text-left border rounded-lg border-slate-900 bg-slate-900 text-white shadow-xs transition-all hover:scale-[1.02]">
+            <button onclick="selectStrategy('hybrid')" id="tab-hybrid" class="strategy-tab p-3 text-left border rounded-lg border-slate-900 dark:border-blue-500 bg-slate-900 dark:bg-blue-600 text-white shadow-xs transition-all hover:scale-[1.02]">
               <div class="text-xs font-semibold text-white">3. Hybrid</div>
-              <div class="text-[11px] text-slate-300 mt-0.5">Vector + BM25</div>
+              <div class="text-[11px] text-slate-300 dark:text-blue-100 mt-0.5">Vector + BM25</div>
             </button>
-            <button onclick="selectStrategy('rerank')" id="tab-rerank" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02]">
-              <div class="text-xs font-semibold text-slate-900">4. Re-rank</div>
-              <div class="text-[11px] text-slate-500 mt-0.5">Cross-Encoder</div>
+            <button onclick="selectStrategy('rerank')" id="tab-rerank" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 transition-all hover:scale-[1.02]">
+              <div class="text-xs font-semibold text-slate-900 dark:text-white">4. Re-rank</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Cross-Encoder</div>
             </button>
           </div>
 
           <!-- Strategy Dynamic Card -->
-          <div id="strategyDetails" class="mt-5 p-4 rounded-lg bg-slate-50/90 border border-slate-200/80 transition-all">
+          <div id="strategyDetails" class="mt-5 p-4 rounded-lg bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 transition-all">
             <!-- Injected by JS -->
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Vector DB: <strong class="text-slate-800">ChromaDB</strong></span>
-          <span>Embeddings: <strong class="text-slate-800">BAAI/bge-small-en-v1.5</strong></span>
-          <span>Orchestration: <strong class="text-slate-800">LangChain</strong></span>
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Vector DB: <strong class="text-slate-800 dark:text-slate-200">ChromaDB</strong></span>
+          <span>Embeddings: <strong class="text-slate-800 dark:text-slate-200">BAAI/bge-small-en-v1.5</strong></span>
+          <span>Orchestration: <strong class="text-slate-800 dark:text-slate-200">LangChain</strong></span>
         </div>
       </div>
 
       <!-- Benchmark Accuracy Chart (5 cols) -->
       <div class="lg:col-span-5 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h2 class="text-base font-semibold text-slate-900">Strategy Comparison Matrix</h2>
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h2 class="text-base font-semibold text-slate-900 dark:text-white">Strategy Comparison Matrix</h2>
             <span class="text-xs text-slate-400">Ragas Metrics</span>
           </div>
           <div class="h-60 mt-4 relative">
             <canvas id="benchmarkChart"></canvas>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-center">
-          <div class="p-2 rounded bg-slate-50 border border-slate-100">
-            <div class="text-xs text-slate-500">Top Precision</div>
-            <div class="text-sm font-semibold text-slate-900 mt-0.5">Re-ranking (0.95)</div>
+        <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
+          <div class="p-2 rounded bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+            <div class="text-xs text-slate-500 dark:text-slate-400">Top Precision</div>
+            <div class="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">Re-ranking (0.95)</div>
           </div>
-          <div class="p-2 rounded bg-slate-50 border border-slate-100">
-            <div class="text-xs text-slate-500">Top Recall</div>
-            <div class="text-sm font-semibold text-slate-900 mt-0.5">Hybrid / Re-rank (1.00)</div>
+          <div class="p-2 rounded bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+            <div class="text-xs text-slate-500 dark:text-slate-400">Top Recall</div>
+            <div class="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">Hybrid / Re-rank (1.00)</div>
           </div>
         </div>
       </div>
@@ -327,14 +344,14 @@
 
     <!-- Row 3: Interactive Query & Retrieval Playground -->
     <div class="spotlight-card rounded-xl p-6 shadow-xs">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">Interactive Query &amp; LLM Judge Playground</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Select a test question from the golden dataset or enter your own</p>
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Interactive Query &amp; LLM Judge Playground</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select a test question from the golden dataset or enter your own</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-xs text-slate-500">Preset Questions:</span>
-          <select id="presetSelect" onchange="loadPresetQuestion()" class="text-xs bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-900">
+          <span class="text-xs text-slate-500 dark:text-slate-400">Preset Questions:</span>
+          <select id="presetSelect" onchange="loadPresetQuestion()" class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-blue-500">
             <option value="0">Q1: Remote Work Policy Days</option>
             <option value="1">Q2: Core Working Hours</option>
             <option value="2">Q3: PTO Entitlement</option>
@@ -348,9 +365,9 @@
       <div class="mt-4 flex gap-2">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-          <input type="text" id="queryInput" value="How many days a week can employees work remotely?" class="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all text-slate-900 font-medium">
+          <input type="text" id="queryInput" value="How many days a week can employees work remotely?" class="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all text-slate-900 dark:text-white font-medium">
         </div>
-        <button onclick="testQueryAnimated()" id="searchBtn" class="shimmer-btn px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xs hover:shadow active:scale-95">
+        <button onclick="testQueryAnimated()" id="searchBtn" class="shimmer-btn px-4 py-2.5 bg-slate-900 dark:bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-slate-800 dark:hover:bg-blue-500 transition-all flex items-center gap-2 shadow-xs hover:shadow active:scale-95">
           <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
           <span>Retrieve &amp; Judge</span>
         </button>
@@ -361,9 +378,9 @@
         
         <!-- Left: Retrieved Chunks -->
         <div class="lg:col-span-7 space-y-3">
-          <div class="flex items-center justify-between text-xs font-semibold text-slate-600 uppercase tracking-wider">
+          <div class="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
             <span>Retrieved Chunks (<span id="activeRetrieverLabel">Hybrid Search</span>)</span>
-            <span class="text-emerald-600 font-mono" id="retrievalTime">Retrieved in 18ms</span>
+            <span class="text-emerald-600 dark:text-emerald-400 font-mono" id="retrievalTime">Retrieved in 18ms</span>
           </div>
           
           <div id="chunksContainer" class="space-y-2.5">
@@ -372,48 +389,48 @@
         </div>
 
         <!-- Right: LLM Judge Evaluation -->
-        <div class="lg:col-span-5 bg-slate-50/90 border border-slate-200 rounded-lg p-4 flex flex-col justify-between">
+        <div class="lg:col-span-5 bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-700">
               <div class="flex items-center gap-2">
-                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-800">LLM-as-a-Judge Verdict</span>
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">LLM-as-a-Judge Verdict</span>
               </div>
-              <span class="text-[11px] font-mono text-slate-500">Groq Llama-3.3-70B</span>
+              <span class="text-[11px] font-mono text-slate-500 dark:text-slate-400">Groq Llama-3.3-70B</span>
             </div>
 
             <div class="mt-4 space-y-3">
               <div>
                 <div class="flex justify-between text-xs font-medium mb-1">
-                  <span class="text-slate-600">Context Precision</span>
-                  <span class="font-mono font-semibold text-slate-900" id="judgePrecision">0.96 / 1.00</span>
+                  <span class="text-slate-600 dark:text-slate-400">Context Precision</span>
+                  <span class="font-mono font-semibold text-slate-900 dark:text-white" id="judgePrecision">0.96 / 1.00</span>
                 </div>
-                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                   <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 96%" id="judgePrecisionBar"></div>
                 </div>
               </div>
 
               <div>
                 <div class="flex justify-between text-xs font-medium mb-1">
-                  <span class="text-slate-600">Context Recall</span>
-                  <span class="font-mono font-semibold text-slate-900" id="judgeRecall">1.00 / 1.00</span>
+                  <span class="text-slate-600 dark:text-slate-400">Context Recall</span>
+                  <span class="font-mono font-semibold text-slate-900 dark:text-white" id="judgeRecall">1.00 / 1.00</span>
                 </div>
-                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                   <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 100%" id="judgeRecallBar"></div>
                 </div>
               </div>
             </div>
 
-            <div class="mt-4 p-3 bg-white border border-slate-200 rounded-md text-xs text-slate-600 space-y-1.5">
-              <div class="font-semibold text-slate-800">Ground Truth Reference:</div>
-              <div class="italic text-slate-600" id="groundTruthText">"Employees can work remotely up to three days a week."</div>
+            <div class="mt-4 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+              <div class="font-semibold text-slate-800 dark:text-white">Ground Truth Reference:</div>
+              <div class="italic text-slate-600 dark:text-slate-300" id="groundTruthText">"Employees can work remotely up to three days a week."</div>
             </div>
           </div>
 
-          <div class="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+          <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
             <span class="flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-              Status: <span class="text-emerald-700 font-semibold">PASSED (&gt;0.80)</span>
+              Status: <span class="text-emerald-700 dark:text-emerald-400 font-semibold">PASSED (&gt;0.80)</span>
             </span>
             <span>Ragas Framework</span>
           </div>
@@ -445,7 +462,7 @@
   </main>
 
   <!-- Footer -->
-  <footer class="relative z-10 border-t border-slate-200 bg-white/80 py-6 mt-12 text-center text-xs text-slate-500">
+  <footer class="relative z-10 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 py-6 mt-12 text-center text-xs text-slate-500 dark:text-slate-400 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
       <div>RAG with Evaluation Comparison • Production Engineering Pipeline</div>
       <div class="flex items-center space-x-4">
@@ -475,7 +492,7 @@
       });
     });
 
-    // Vector Network Particle Animation on Canvas
+    // Vector Network Particle Animation
     const canvas = document.getElementById('vectorCanvas');
     const ctx = canvas.getContext('2d');
     let width = canvas.width = window.innerWidth;
@@ -487,20 +504,21 @@
     });
 
     const particles = [];
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 30; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
         radius: Math.random() * 2 + 1.5
       });
     }
 
-    function animateVectorSpace() {
+    function animate() {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
-      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+      const isDark = document.documentElement.classList.contains('dark');
+      ctx.fillStyle = isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(203, 213, 225, 0.3)';
 
       particles.forEach((p, i) => {
         p.x += p.vx;
@@ -515,7 +533,7 @@
         for (let j = i + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-          if (dist < 120) {
+          if (dist < 110) {
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
@@ -523,9 +541,9 @@
           }
         }
       });
-      requestAnimationFrame(animateVectorSpace);
+      requestAnimationFrame(animate);
     }
-    animateVectorSpace();
+    animate();
 
     // Animated Count Up
     function animateCounters() {
@@ -636,33 +654,34 @@
     function selectStrategy(key) {
       currentStrategy = key;
       const data = strategyData[key];
+      const isDark = document.documentElement.classList.contains('dark');
 
       document.querySelectorAll('.strategy-tab').forEach(tab => {
-        tab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02] text-slate-900";
+        tab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 transition-all hover:scale-[1.02] text-slate-900 dark:text-white";
       });
       const activeTab = document.getElementById(`tab-${key}`);
-      activeTab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-900 bg-slate-900 text-white shadow-xs transition-all hover:scale-[1.02]";
+      activeTab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-900 dark:border-blue-500 bg-slate-900 dark:bg-blue-600 text-white shadow-xs transition-all hover:scale-[1.02]";
 
       const container = document.getElementById('strategyDetails');
       container.innerHTML = `
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-900">${data.title}</span>
-          <span class="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-200 text-slate-700">${data.badge}</span>
+          <span class="text-xs font-semibold text-slate-900 dark:text-white">${data.title}</span>
+          <span class="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200">${data.badge}</span>
         </div>
-        <p class="text-xs text-slate-600 mt-2 leading-relaxed">${data.desc}</p>
+        <p class="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">${data.desc}</p>
         
-        <div class="mt-3 p-2.5 bg-slate-900 text-slate-200 rounded font-mono text-[11px] overflow-x-auto">
+        <div class="mt-3 p-2.5 bg-slate-900 text-slate-200 rounded font-mono text-[11px] overflow-x-auto shadow-inner">
           <code>${data.code}</code>
         </div>
 
         <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
-          <div class="p-2 rounded bg-emerald-50/70 border border-emerald-100">
-            <span class="font-semibold text-emerald-800">Advantage:</span>
-            <p class="text-emerald-700 mt-0.5 text-[11px]">${data.pros}</p>
+          <div class="p-2 rounded bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900">
+            <span class="font-semibold text-emerald-800 dark:text-emerald-300">Advantage:</span>
+            <p class="text-emerald-700 dark:text-emerald-400 mt-0.5 text-[11px]">${data.pros}</p>
           </div>
-          <div class="p-2 rounded bg-amber-50/70 border border-amber-100">
-            <span class="font-semibold text-amber-800">Trade-off:</span>
-            <p class="text-amber-700 mt-0.5 text-[11px]">${data.cons}</p>
+          <div class="p-2 rounded bg-amber-50/70 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900">
+            <span class="font-semibold text-amber-800 dark:text-amber-300">Trade-off:</span>
+            <p class="text-amber-700 dark:text-amber-400 mt-0.5 text-[11px]">${data.cons}</p>
           </div>
         </div>
       `;
@@ -675,6 +694,8 @@
     let benchmarkChart;
     function initChart() {
       const ctx = document.getElementById('benchmarkChart').getContext('2d');
+      const isDark = document.documentElement.classList.contains('dark');
+      
       benchmarkChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -683,7 +704,7 @@
             {
               label: 'Context Precision',
               data: [0.70, 0.75, 0.85, 0.95],
-              backgroundColor: '#0f172a',
+              backgroundColor: isDark ? '#3b82f6' : '#0f172a',
               borderRadius: 4,
             },
             {
@@ -700,24 +721,43 @@
           plugins: {
             legend: {
               position: 'top',
-              labels: { boxWidth: 12, font: { family: 'Geist', size: 11 } }
+              labels: { 
+                boxWidth: 12, 
+                font: { family: 'Geist', size: 11 },
+                color: isDark ? '#cbd5e1' : '#475569'
+              }
             }
           },
           scales: {
             y: {
               min: 0.5,
               max: 1.0,
-              ticks: { stepSize: 0.1, font: { family: 'JetBrains Mono', size: 10 } },
-              grid: { color: '#f1f5f9' }
+              ticks: { 
+                stepSize: 0.1, 
+                font: { family: 'JetBrains Mono', size: 10 },
+                color: isDark ? '#94a3b8' : '#64748b'
+              },
+              grid: { color: isDark ? '#1e293b' : '#f1f5f9' }
             },
             x: {
-              ticks: { font: { family: 'Geist', size: 11 } },
+              ticks: { 
+                font: { family: 'Geist', size: 11 },
+                color: isDark ? '#94a3b8' : '#64748b'
+              },
               grid: { display: false }
             }
           }
         }
       });
     }
+
+    window.addEventListener('themeChanged', () => {
+      if (benchmarkChart) {
+        benchmarkChart.destroy();
+        initChart();
+      }
+      selectStrategy(currentStrategy);
+    });
 
     function loadPresetQuestion() {
       const idx = document.getElementById('presetSelect').value;
@@ -732,21 +772,21 @@
       
       const container = document.getElementById('chunksContainer');
       container.innerHTML = `
-        <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1 transition-all hover:border-slate-400 hover:shadow-xs">
-          <div class="flex items-center justify-between text-slate-500 font-mono text-[11px]">
-            <span class="font-semibold text-slate-800 flex items-center gap-1.5">
+        <div class="p-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs space-y-1 transition-all hover:border-slate-400 hover:shadow-xs">
+          <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+            <span class="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Chunk #1 (Similarity: 0.94)
             </span>
             <span>source_document.txt : Lines 3-6</span>
           </div>
-          <p class="text-slate-700 leading-relaxed">${item.context}</p>
+          <p class="text-slate-700 dark:text-slate-300 leading-relaxed">${item.context}</p>
         </div>
-        <div class="p-3 bg-white border border-slate-200 rounded-lg text-xs space-y-1 transition-all opacity-70 hover:opacity-100 hover:border-slate-400">
-          <div class="flex items-center justify-between text-slate-500 font-mono text-[11px]">
-            <span class="font-semibold text-slate-800">Chunk #2 (Similarity: 0.78)</span>
+        <div class="p-3 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs space-y-1 transition-all opacity-70 hover:opacity-100 hover:border-slate-400">
+          <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+            <span class="font-semibold text-slate-800 dark:text-slate-200">Chunk #2 (Similarity: 0.78)</span>
             <span>source_document.txt : Lines 7-10</span>
           </div>
-          <p class="text-slate-600 leading-relaxed">Welcome to the Acme Corp Employee Handbook. This document outlines our company policies regarding remote work, paid time off...</p>
+          <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Welcome to the Acme Corp Employee Handbook. This document outlines our company policies regarding remote work, paid time off...</p>
         </div>
       `;
 
@@ -779,7 +819,6 @@
         lucide.createIcons();
         testQueryAnimated();
         
-        // Confetti Particle Explosion
         confetti({
           particleCount: 60,
           spread: 70,

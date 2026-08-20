@@ -4,14 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Retrieval Strategies Deep Dive | RAG.Eval</title>
+  <script src="theme.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -23,15 +24,20 @@
     }
   </script>
   <style>
-    body {
-      font-family: 'Geist', sans-serif;
+    body { font-family: 'Geist', sans-serif; }
+    .light-bg {
       background-color: #FAFAFA;
       background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
       background-size: 24px 24px;
     }
+    .dark .light-bg {
+      background-color: #030712;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+    }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
     
     .spotlight-card {
       position: relative;
@@ -40,6 +46,10 @@
       border: 1px solid rgba(226, 232, 240, 0.9);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
+    }
+    .dark .spotlight-card {
+      background: rgba(15, 23, 42, 0.75);
+      border-color: rgba(30, 41, 59, 0.9);
     }
     .spotlight-card::before {
       content: '';
@@ -54,40 +64,51 @@
       transition: opacity 0.3s ease;
       pointer-events: none;
     }
+    .dark .spotlight-card::before {
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%);
+    }
     .spotlight-card:hover::before { opacity: 1; }
     .spotlight-card:hover {
       border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
       box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
     }
+    .dark .spotlight-card:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    }
   </style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+<body class="light-bg text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white dark:selection:bg-blue-600 transition-colors duration-300">
 
   <!-- Interactive Background Canvas -->
-  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"></canvas>
 
   <!-- Top Navigation -->
-  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white dark:text-slate-950 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
-          <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
-          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">v1.0.4</span>
+          <span class="text-base font-semibold tracking-tight text-slate-900 dark:text-white">RAG.Eval</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700">v1.0.4</span>
         </a>
-        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
-          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
-          <a href="strategies.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Strategies</a>
-          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
-          <a href="document.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Source Document</a>
-          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
+        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200 dark:border-slate-800">
+          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Overview</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-md transition-all shadow-xs">Strategies</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Evaluation Runs</a>
+          <a href="document.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">Source Document</a>
+          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-all">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all hover:scale-105 active:scale-95">
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" id="themeToggleBtn" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-xs">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all hover:scale-105 active:scale-95">
           <i data-lucide="github" class="w-3.5 h-3.5"></i>
           <span>GitHub Repo</span>
         </a>
@@ -99,17 +120,17 @@
   <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
       <div>
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 mb-2">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
           <span>4 Production Implementations</span>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Retrieval Strategies Deep Dive</h1>
-        <p class="text-sm text-slate-500 mt-1">Explore how each chunking and retrieval algorithm functions in Python and LangChain.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Retrieval Strategies Deep Dive</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Explore how each chunking and retrieval algorithm functions in Python and LangChain.</p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2.5 py-1 rounded border border-slate-200">rag_pipeline.py</span>
+        <span class="text-xs text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700">rag_pipeline.py</span>
       </div>
     </div>
 
@@ -121,15 +142,15 @@
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 01</span>
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 font-medium text-slate-700">Baseline</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-medium text-slate-700 dark:text-slate-300">Baseline</span>
           </div>
-          <h2 class="text-lg font-bold text-slate-900 mt-2">Simple Chunking</h2>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">RecursiveCharacterTextSplitter</p>
-          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white mt-2">Simple Chunking</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">RecursiveCharacterTextSplitter</p>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
             Splits text into fixed size chunks (500 chars) with a sliding window overlap (50 chars). Searches ChromaDB using cosine distance.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
+          <div class="mt-4 p-3 bg-slate-900 dark:bg-slate-950 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner border border-slate-800">
             <pre><code>text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=50
@@ -139,18 +160,18 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Precision</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.70</div>
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Precision</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.70</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Recall</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.65</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Recall</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.65</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Speed</span>
-            <div class="font-bold text-slate-900 mt-0.5">12ms</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Speed</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">12ms</div>
           </div>
         </div>
       </div>
@@ -160,15 +181,15 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 02</span>
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium border border-blue-100">Smart Splitting</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-medium border border-blue-100 dark:border-blue-900">Smart Splitting</span>
           </div>
-          <h2 class="text-lg font-bold text-slate-900 mt-2">Semantic Chunking</h2>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">SemanticChunker</p>
-          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white mt-2">Semantic Chunking</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">SemanticChunker</p>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
             Evaluates consecutive sentences using embedding distances. Splits text only where a topic shift or contextual break occurs.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
+          <div class="mt-4 p-3 bg-slate-900 dark:bg-slate-950 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner border border-slate-800">
             <pre><code>text_splitter = SemanticChunker(
     embeddings=self.embeddings
 )
@@ -177,36 +198,36 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Precision</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.75</div>
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Precision</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.75</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Recall</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.75</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Recall</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.75</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Speed</span>
-            <div class="font-bold text-slate-900 mt-0.5">48ms</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Speed</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">48ms</div>
           </div>
         </div>
       </div>
 
       <!-- Strategy 3 -->
-      <div class="spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between border-slate-900/30">
+      <div class="spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between border-slate-900/30 dark:border-blue-500/40">
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 03</span>
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">Recommended</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-200 dark:border-emerald-800">Recommended</span>
           </div>
-          <h2 class="text-lg font-bold text-slate-900 mt-2">Hybrid Search</h2>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">EnsembleRetriever (Chroma + BM25)</p>
-          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white mt-2">Hybrid Search</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">EnsembleRetriever (Chroma + BM25)</p>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
             Combines dense vector search (meaning/concepts) with sparse BM25 (exact keyword match) using 50/50 reciprocal rank fusion.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
+          <div class="mt-4 p-3 bg-slate-900 dark:bg-slate-950 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner border border-slate-800">
             <pre><code>ensemble = EnsembleRetriever(
     retrievers=[vector_retriever, bm25_retriever],
     weights=[0.5, 0.5]
@@ -215,18 +236,18 @@ return ensemble</code></pre>
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Precision</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.85</div>
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Precision</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.85</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Recall</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.85</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Recall</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.85</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Speed</span>
-            <div class="font-bold text-slate-900 mt-0.5">28ms</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Speed</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">28ms</div>
           </div>
         </div>
       </div>
@@ -236,15 +257,15 @@ return ensemble</code></pre>
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 04</span>
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium border border-purple-200">Highest Accuracy</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800">Highest Accuracy</span>
           </div>
-          <h2 class="text-lg font-bold text-slate-900 mt-2">Cross-Encoder Re-ranking</h2>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">ContextualCompressionRetriever</p>
-          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white mt-2">Cross-Encoder Re-ranking</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">ContextualCompressionRetriever</p>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
             Fetches a broad top-10 candidate pool from Chroma, then uses a HuggingFace cross-encoder model to re-score and keep the top 2.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
+          <div class="mt-4 p-3 bg-slate-900 dark:bg-slate-950 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner border border-slate-800">
             <pre><code>model = HuggingFaceCrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 compressor = CrossEncoderReranker(model=model, top_n=2)
 return ContextualCompressionRetriever(
@@ -253,34 +274,34 @@ return ContextualCompressionRetriever(
           </div>
         </div>
 
-        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Precision</span>
-            <div class="font-bold text-slate-900 mt-0.5">0.95</div>
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Precision</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">0.95</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Recall</span>
-            <div class="font-bold text-slate-900 mt-0.5">1.00</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Recall</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">1.00</div>
           </div>
-          <div class="p-2 bg-slate-50 rounded">
-            <span class="text-slate-500">Speed</span>
-            <div class="font-bold text-slate-900 mt-0.5">64ms</div>
+          <div class="p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+            <span class="text-slate-500 dark:text-slate-400">Speed</span>
+            <div class="font-bold text-slate-900 dark:text-white mt-0.5">64ms</div>
           </div>
         </div>
       </div>
 
     </div>
 
-    <!-- Live Interactive Chunking Simulator with Smooth Tag Animations -->
+    <!-- Live Interactive Chunking Simulator -->
     <div class="spotlight-card rounded-xl p-6 shadow-xs">
-      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">Interactive Document Chunking Visualizer</h2>
-          <p class="text-xs text-slate-500 mt-0.5">See how raw text is partitioned into vector embeddings under different algorithms</p>
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Interactive Document Chunking Visualizer</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">See how raw text is partitioned into vector embeddings under different algorithms</p>
         </div>
         <div class="flex gap-2">
-          <button onclick="setChunkerMode('simple')" id="mode-simple" class="px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white shadow-xs transition-all hover:scale-105 active:scale-95">Fixed Chunker</button>
-          <button onclick="setChunkerMode('semantic')" id="mode-semantic" class="px-3.5 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95">Semantic Chunker</button>
+          <button onclick="setChunkerMode('simple')" id="mode-simple" class="px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 dark:bg-blue-600 text-white shadow-xs transition-all hover:scale-105 active:scale-95">Fixed Chunker</button>
+          <button onclick="setChunkerMode('semantic')" id="mode-semantic" class="px-3.5 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95">Semantic Chunker</button>
         </div>
       </div>
 
@@ -294,7 +315,7 @@ return ContextualCompressionRetriever(
   <script>
     lucide.createIcons();
 
-    // Mouse Spotlight Effect on cards
+    // Mouse Spotlight Effect
     document.querySelectorAll('.spotlight-card').forEach(card => {
       card.addEventListener('mousemove', e => {
         const rect = card.getBoundingClientRect();
@@ -329,8 +350,9 @@ return ContextualCompressionRetriever(
 
     function animate() {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
-      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+      const isDark = document.documentElement.classList.contains('dark');
+      ctx.fillStyle = isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(203, 213, 225, 0.3)';
 
       particles.forEach((p, i) => {
         p.x += p.vx;
@@ -369,75 +391,75 @@ return ContextualCompressionRetriever(
       const btnSemantic = document.getElementById('mode-semantic');
 
       if (mode === 'simple') {
-        btnSimple.className = "px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white shadow-xs transition-all hover:scale-105 active:scale-95";
-        btnSemantic.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95";
+        btnSimple.className = "px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 dark:bg-blue-600 text-white shadow-xs transition-all hover:scale-105 active:scale-95";
+        btnSemantic.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95";
         
         container.innerHTML = `
-          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all">
+          <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-xs transition-all">
             <div>
-              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
-                <span class="font-bold text-slate-800">Chunk #1 (480 chars)</span>
-                <span class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">Fixed Split</span>
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 dark:text-slate-400 mb-2">
+                <span class="font-bold text-slate-800 dark:text-white">Chunk #1 (480 chars)</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[10px]">Fixed Split</span>
               </div>
-              <p class="text-slate-700 leading-relaxed">${sampleDoc[0]}</p>
+              <p class="text-slate-700 dark:text-slate-300 leading-relaxed">${sampleDoc[0]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-emerald-600 font-mono font-semibold">✓ Token Length: 64</div>
+            <div class="mt-3 text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">✓ Token Length: 64</div>
           </div>
-          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all">
+          <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-xs transition-all">
             <div>
-              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
-                <span class="font-bold text-slate-800">Chunk #2 (460 chars)</span>
-                <span class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">Fixed Split</span>
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 dark:text-slate-400 mb-2">
+                <span class="font-bold text-slate-800 dark:text-white">Chunk #2 (460 chars)</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[10px]">Fixed Split</span>
               </div>
-              <p class="text-slate-700 leading-relaxed">${sampleDoc[1]}</p>
+              <p class="text-slate-700 dark:text-slate-300 leading-relaxed">${sampleDoc[1]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-emerald-600 font-mono font-semibold">✓ Token Length: 58</div>
+            <div class="mt-3 text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">✓ Token Length: 58</div>
           </div>
-          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all">
+          <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-500 hover:shadow-xs transition-all">
             <div>
-              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
-                <span class="font-bold text-slate-800">Chunk #3 (420 chars)</span>
-                <span class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">Fixed Split</span>
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 dark:text-slate-400 mb-2">
+                <span class="font-bold text-slate-800 dark:text-white">Chunk #3 (420 chars)</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded text-[10px]">Fixed Split</span>
               </div>
-              <p class="text-slate-700 leading-relaxed">${sampleDoc[2]}</p>
+              <p class="text-slate-700 dark:text-slate-300 leading-relaxed">${sampleDoc[2]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-emerald-600 font-mono font-semibold">✓ Token Length: 52</div>
+            <div class="mt-3 text-[11px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold">✓ Token Length: 52</div>
           </div>
         `;
       } else {
-        btnSemantic.className = "px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white shadow-xs transition-all hover:scale-105 active:scale-95";
-        btnSimple.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95";
+        btnSemantic.className = "px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 dark:bg-blue-600 text-white shadow-xs transition-all hover:scale-105 active:scale-95";
+        btnSimple.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95";
         
         container.innerHTML = `
-          <div class="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-xs transition-all">
+          <div class="p-4 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs flex flex-col justify-between hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-xs transition-all">
             <div>
-              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
-                <span class="font-bold text-slate-900">Topic: Remote Work</span>
-                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]">Cosine 0.82</span>
+              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 dark:text-blue-300 mb-2">
+                <span class="font-bold text-slate-900 dark:text-white">Topic: Remote Work</span>
+                <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 rounded text-[10px]">Cosine 0.82</span>
               </div>
-              <p class="text-slate-800 leading-relaxed">${sampleDoc[0]}</p>
+              <p class="text-slate-800 dark:text-slate-200 leading-relaxed">${sampleDoc[0]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-blue-700 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
+            <div class="mt-3 text-[11px] text-blue-700 dark:text-blue-300 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
           </div>
-          <div class="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-xs transition-all">
+          <div class="p-4 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs flex flex-col justify-between hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-xs transition-all">
             <div>
-              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
-                <span class="font-bold text-slate-900">Topic: Paid Time Off</span>
-                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]">Cosine 0.79</span>
+              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 dark:text-blue-300 mb-2">
+                <span class="font-bold text-slate-900 dark:text-white">Topic: Paid Time Off</span>
+                <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 rounded text-[10px]">Cosine 0.79</span>
               </div>
-              <p class="text-slate-800 leading-relaxed">${sampleDoc[1]}</p>
+              <p class="text-slate-800 dark:text-slate-200 leading-relaxed">${sampleDoc[1]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-blue-700 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
+            <div class="mt-3 text-[11px] text-blue-700 dark:text-blue-300 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
           </div>
-          <div class="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-xs transition-all">
+          <div class="p-4 rounded-lg bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs flex flex-col justify-between hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-xs transition-all">
             <div>
-              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
-                <span class="font-bold text-slate-900">Topic: Stipends</span>
-                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]">Cosine 0.85</span>
+              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 dark:text-blue-300 mb-2">
+                <span class="font-bold text-slate-900 dark:text-white">Topic: Stipends</span>
+                <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 rounded text-[10px]">Cosine 0.85</span>
               </div>
-              <p class="text-slate-800 leading-relaxed">${sampleDoc[2]}</p>
+              <p class="text-slate-800 dark:text-slate-200 leading-relaxed">${sampleDoc[2]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-blue-700 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
+            <div class="mt-3 text-[11px] text-blue-700 dark:text-blue-300 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
           </div>
         `;
       }
