@@ -1,7 +1,5 @@
 # RAG Evaluation Comparison Project
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FAvi3784%2FRAG_EVAL_COMPARISON)
-
 ## What is this project?
 This project builds a production-grade Retrieval-Augmented Generation (RAG) system. Think of RAG like giving an AI an open-book test. Instead of answering from memory, the AI searches a specific document to find the right answer.
 
