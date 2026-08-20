@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Source Document & Golden Dataset | RAG.Eval</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Geist', sans-serif;
+      background-color: #FAFAFA;
+      background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    
+    .spotlight-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+    .spotlight-card:hover {
+      border-color: rgba(148, 163, 184, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+
+  <!-- Interactive Background Canvas -->
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+  <!-- Top Navigation -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <a href="index.html" class="flex items-center space-x-2.5 group">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
+            R
+          </div>
+          <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">v1.0.4</span>
+        </a>
+        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
+          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Strategies</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
+          <a href="document.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Source Document</a>
+          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
+        </nav>
+      </div>
+      <div class="flex items-center space-x-3">
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON/tree/main/data" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all hover:scale-105 active:scale-95">
+          <i data-lucide="folder-git" class="w-3.5 h-3.5"></i>
+          <span>View on GitHub (/data)</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div>
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-600"></i>
+          <span>Corpus &amp; Ground Truth</span>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Source Document &amp; Golden Dataset</h1>
+        <p class="text-sm text-slate-500 mt-1">The official corporate HR policy document indexed by ChromaDB and tested against 5 verified Q&amp;A evaluation pairs.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2.5 py-1 rounded border border-slate-200">data/source_document.txt</span>
+      </div>
+    </div>
+
+    <!-- 2 Column Layout: Source Document (Left) & Golden Dataset (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Source Document Viewer (7 cols) -->
+      <div class="lg:col-span-7 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-md bg-slate-100 text-slate-700">
+                <i data-lucide="book-open" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-semibold text-slate-900">Acme Corp Employee Handbook</h2>
+                <p class="text-xs text-slate-500 font-mono">source_document.txt • 1,433 bytes • 3 Policy Paragraphs</p>
+              </div>
+            </div>
+            <button onclick="copyDocument()" id="copyDocBtn" class="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-all flex items-center gap-1">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copy Text</span>
+            </button>
+          </div>
+
+          <!-- Document Content Sections with Interactive Hover Highlights -->
+          <div class="mt-5 space-y-4 text-xs leading-relaxed" id="documentContent">
+            
+            <!-- Paragraph 1 -->
+            <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
+              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-2">
+                <span class="font-bold text-slate-700 uppercase">Section 01: Remote Work Policy</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px]">Chunk ID #1</span>
+              </div>
+              <p class="text-slate-800">
+                Welcome to the Acme Corp Employee Handbook. This document outlines our company policies regarding remote work, paid time off, and professional development.
+              </p>
+              <p class="text-slate-800 mt-2 font-medium">
+                Employees at Acme Corp are allowed to work remotely up to three days a week. We believe in a flexible work environment that promotes work-life balance. However, employees must be available during core hours, which are from 10:00 AM to 3:00 PM in their local time zone. When working remotely, employees are expected to maintain a secure internet connection and ensure that company data is protected at all times.
+              </p>
+            </div>
+
+            <!-- Paragraph 2 -->
+            <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
+              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-2">
+                <span class="font-bold text-slate-700 uppercase">Section 02: Paid Time Off (PTO)</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px]">Chunk ID #2</span>
+              </div>
+              <p class="text-slate-800">
+                All full-time employees are entitled to 20 days of paid time off per calendar year. This PTO can be used for vacation, personal days, or sick leave. Unused PTO does not roll over to the next year, so we encourage everyone to use their time. In addition to regular PTO, the company observes 10 public holidays. Requests for time off should be submitted through the HR portal at least two weeks in advance for planned vacations.
+              </p>
+            </div>
+
+            <!-- Paragraph 3 -->
+            <div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
+              <div class="flex items-center justify-between font-mono text-[11px] text-slate-400 mb-2">
+                <span class="font-bold text-slate-700 uppercase">Section 03: Professional Development</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px]">Chunk ID #3</span>
+              </div>
+              <p class="text-slate-800">
+                Acme Corp is committed to the growth of its employees. Every employee receives an annual stipend of $1,000 to be used for professional development. This can include attending conferences, taking online courses, or purchasing books related to their field. To claim this stipend, employees must submit a proposal to their manager and provide receipts for reimbursement.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>Loaded via: <strong class="text-slate-800">LangChain TextLoader</strong></span>
+          <span>Embeddings: <strong class="text-slate-800">BAAI/bge-small-en-v1.5</strong></span>
+        </div>
+      </div>
+
+      <!-- Golden Dataset Viewer (5 cols) -->
+      <div class="lg:col-span-5 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h2 class="text-base font-semibold text-slate-900">Golden Dataset (5 Q&amp;A Pairs)</h2>
+              <p class="text-xs text-slate-500 font-mono">golden_dataset.json • Ragas Ground Truth</p>
+            </div>
+            <span class="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 font-semibold">5 Verified</span>
+          </div>
+
+          <!-- Q&A Pair List -->
+          <div class="mt-4 space-y-3 max-h-[520px] overflow-y-auto custom-scrollbar pr-1">
+            
+            <!-- QA 1 -->
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span class="font-bold text-slate-800">Q1</span>
+                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+              </div>
+              <div class="font-semibold text-slate-900">How many days a week can employees work remotely?</div>
+              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
+                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"Employees can work remotely up to three days a week."
+              </div>
+            </div>
+
+            <!-- QA 2 -->
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span class="font-bold text-slate-800">Q2</span>
+                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+              </div>
+              <div class="font-semibold text-slate-900">What are the core hours when working remotely?</div>
+              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
+                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"The core hours are from 10:00 AM to 3:00 PM in the employee's local time zone."
+              </div>
+            </div>
+
+            <!-- QA 3 -->
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span class="font-bold text-slate-800">Q3</span>
+                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+              </div>
+              <div class="font-semibold text-slate-900">How many days of paid time off (PTO) do full-time employees get?</div>
+              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
+                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"Full-time employees are entitled to 20 days of paid time off per calendar year."
+              </div>
+            </div>
+
+            <!-- QA 4 -->
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span class="font-bold text-slate-800">Q4</span>
+                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+              </div>
+              <div class="font-semibold text-slate-900">Does unused PTO roll over to the next year?</div>
+              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
+                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"No, unused PTO does not roll over to the next year."
+              </div>
+            </div>
+
+            <!-- QA 5 -->
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs space-y-1.5 hover:border-slate-400 transition-all">
+              <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span class="font-bold text-slate-800">Q5</span>
+                <span class="text-emerald-600 font-semibold">Recall: 1.00</span>
+              </div>
+              <div class="font-semibold text-slate-900">What is the annual stipend for professional development?</div>
+              <div class="text-slate-600 italic bg-white p-2 rounded border border-slate-200/60">
+                <span class="font-semibold text-slate-800 not-italic">Ground Truth: </span>"Every employee receives an annual stipend of $1,000 for professional development."
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <a href="index.html" class="text-xs font-semibold text-slate-900 hover:text-blue-600 flex items-center gap-1">
+            <span>Test in Playground</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </a>
+          <span>Format: Ragas Evaluator</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    // Mouse Spotlight Effect
+    document.querySelectorAll('.spotlight-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+    });
+
+    // Vector Network Particle Animation
+    const canvas = document.getElementById('vectorCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    for (let i = 0; i < 30; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 2 + 1.5
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    function copyDocument() {
+      const text = `Welcome to the Acme Corp Employee Handbook. This document outlines our company policies regarding remote work, paid time off, and professional development.\n\nRemote Work Policy:\nEmployees at Acme Corp are allowed to work remotely up to three days a week. We believe in a flexible work environment that promotes work-life balance. However, employees must be available during core hours, which are from 10:00 AM to 3:00 PM in their local time zone. When working remotely, employees are expected to maintain a secure internet connection and ensure that company data is protected at all times.\n\nPaid Time Off (PTO):\nAll full-time employees are entitled to 20 days of paid time off per calendar year. This PTO can be used for vacation, personal days, or sick leave. Unused PTO does not roll over to the next year, so we encourage everyone to use their time. In addition to regular PTO, the company observes 10 public holidays. Requests for time off should be submitted through the HR portal at least two weeks in advance for planned vacations.\n\nProfessional Development:\nAcme Corp is committed to the growth of its employees. Every employee receives an annual stipend of $1,000 to be used for professional development. This can include attending conferences, taking online courses, or purchasing books related to their field. To claim this stipend, employees must submit a proposal to their manager and provide receipts for reimbursement.`;
+      
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyDocBtn');
+        btn.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-emerald-600"></i><span>Copied!</span>`;
+        lucide.createIcons();
+        setTimeout(() => {
+          btn.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i><span>Copy Text</span>`;
+          lucide.createIcons();
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
