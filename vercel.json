@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/", "destination": "/frontend/index.html" },
+    { "source": "/strategies", "destination": "/frontend/strategies.html" },
+    { "source": "/eval_runs", "destination": "/frontend/eval_runs.html" },
+    { "source": "/document", "destination": "/frontend/document.html" },
+    { "source": "/cicd", "destination": "/frontend/cicd.html" },
+    { "source": "/(.*)", "destination": "/frontend/$1" }
+  ]
+}
