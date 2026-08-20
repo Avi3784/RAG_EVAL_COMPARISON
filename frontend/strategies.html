@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retrieval Strategies Deep Dive | RAG.Eval</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Geist', sans-serif;
+      background-color: #FAFAFA;
+      background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(203, 213, 225, 1);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+
+  <!-- Top Navigation -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <a href="index.html" class="flex items-center space-x-2.5 group">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:scale-105 transition-transform">
+            R
+          </div>
+          <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">v1.0.4</span>
+        </a>
+        <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
+          <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md">Strategies</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
+          <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
+        </nav>
+      </div>
+      <div class="flex items-center space-x-3">
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all">
+          <i data-lucide="github" class="w-3.5 h-3.5"></i>
+          <span>GitHub Repo</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div>
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>4 Production Implementations</span>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Retrieval Strategies Deep Dive</h1>
+        <p class="text-sm text-slate-500 mt-1">Explore how each chunking and retrieval algorithm functions in Python and LangChain.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500 font-mono">rag_pipeline.py</span>
+      </div>
+    </div>
+
+    <!-- 4 Strategy Detailed Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Strategy 1 -->
+      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 01</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 font-medium text-slate-700">Baseline</span>
+          </div>
+          <h2 class="text-lg font-bold text-slate-900 mt-2">Simple Chunking</h2>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">RecursiveCharacterTextSplitter</p>
+          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+            Splits text into fixed size chunks (500 chars) with a sliding window overlap (50 chars). It searches ChromaDB using cosine distance.
+          </p>
+
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+            <pre><code>text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50
+)
+chunks = text_splitter.split_documents(docs)
+retriever = vectorstore.as_retriever(k=3)</code></pre>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Precision</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.70</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Recall</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.65</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Speed</span>
+            <div class="font-bold text-slate-900 mt-0.5">12ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy 2 -->
+      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 02</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium border border-blue-100">Smart Splitting</span>
+          </div>
+          <h2 class="text-lg font-bold text-slate-900 mt-2">Semantic Chunking</h2>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">SemanticChunker</p>
+          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+            Evaluates consecutive sentences using embedding distances. Splits text only where a topic shift or contextual break occurs.
+          </p>
+
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+            <pre><code>text_splitter = SemanticChunker(
+    embeddings=self.embeddings
+)
+chunks = text_splitter.split_documents(docs)
+retriever = vectorstore.as_retriever(k=3)</code></pre>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Precision</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.75</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Recall</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.75</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Speed</span>
+            <div class="font-bold text-slate-900 mt-0.5">48ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy 3 -->
+      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between border-slate-900/40">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 03</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium border border-emerald-200">Recommended</span>
+          </div>
+          <h2 class="text-lg font-bold text-slate-900 mt-2">Hybrid Search</h2>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">EnsembleRetriever (Chroma + BM25)</p>
+          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+            Combines dense vector search (meaning/concepts) with sparse BM25 (exact keyword match) using 50/50 reciprocal rank fusion.
+          </p>
+
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+            <pre><code>ensemble = EnsembleRetriever(
+    retrievers=[vector_retriever, bm25_retriever],
+    weights=[0.5, 0.5]
+)
+return ensemble</code></pre>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Precision</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.85</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Recall</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.85</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Speed</span>
+            <div class="font-bold text-slate-900 mt-0.5">28ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategy 4 -->
+      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 04</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium border border-purple-200">Highest Accuracy</span>
+          </div>
+          <h2 class="text-lg font-bold text-slate-900 mt-2">Cross-Encoder Re-ranking</h2>
+          <p class="text-xs text-slate-500 font-mono mt-0.5">ContextualCompressionRetriever</p>
+          <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+            Fetches a broad top-10 candidate pool from Chroma, then uses a HuggingFace cross-encoder model to re-score and keep the top 2.
+          </p>
+
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+            <pre><code>model = HuggingFaceCrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+compressor = CrossEncoderReranker(model=model, top_n=2)
+return ContextualCompressionRetriever(
+    base_compressor=compressor, base_retriever=top_10
+)</code></pre>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Precision</span>
+            <div class="font-bold text-slate-900 mt-0.5">0.95</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Recall</span>
+            <div class="font-bold text-slate-900 mt-0.5">1.00</div>
+          </div>
+          <div class="p-2 bg-slate-50 rounded">
+            <span class="text-slate-500">Speed</span>
+            <div class="font-bold text-slate-900 mt-0.5">64ms</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Live Interactive Chunking Simulator -->
+    <div class="glass-card rounded-xl p-6 shadow-xs">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-base font-semibold text-slate-900">Interactive Document Chunking Visualizer</h2>
+          <p class="text-xs text-slate-500 mt-0.5">See how raw text is partitioned into vector embeddings under different algorithms</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="setChunkerMode('simple')" id="mode-simple" class="px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white">Fixed Chunker</button>
+          <button onclick="setChunkerMode('semantic')" id="mode-semantic" class="px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700">Semantic Chunker</button>
+        </div>
+      </div>
+
+      <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4" id="chunkVisualizerOutput">
+        <!-- Chunks injected dynamically -->
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    const sampleDoc = [
+      "Employees at Acme Corp are allowed to work remotely up to three days a week. We believe in a flexible work environment that promotes work-life balance. However, employees must be available during core hours, which are from 10:00 AM to 3:00 PM in their local time zone.",
+      "All full-time employees are entitled to 20 days of paid time off per calendar year. This PTO can be used for vacation, personal days, or sick leave. Unused PTO does not roll over to the next year, so we encourage everyone to use their time.",
+      "Acme Corp is committed to the growth of its employees. Every employee receives an annual stipend of $1,000 to be used for professional development. This can include attending conferences, taking online courses, or purchasing books."
+    ];
+
+    function setChunkerMode(mode) {
+      const container = document.getElementById('chunkVisualizerOutput');
+      const btnSimple = document.getElementById('mode-simple');
+      const btnSemantic = document.getElementById('mode-semantic');
+
+      if (mode === 'simple') {
+        btnSimple.className = "px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white";
+        btnSemantic.className = "px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700";
+        
+        container.innerHTML = `
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
+                <span class="font-bold text-slate-800">Chunk #1 (480 chars)</span>
+                <span>Fixed Split</span>
+              </div>
+              <p class="text-slate-700 leading-relaxed">${sampleDoc[0]}</p>
+            </div>
+            <div class="mt-3 text-[11px] text-emerald-600 font-mono">✓ Token Length: 64</div>
+          </div>
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
+                <span class="font-bold text-slate-800">Chunk #2 (460 chars)</span>
+                <span>Fixed Split</span>
+              </div>
+              <p class="text-slate-700 leading-relaxed">${sampleDoc[1]}</p>
+            </div>
+            <div class="mt-3 text-[11px] text-emerald-600 font-mono">✓ Token Length: 58</div>
+          </div>
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
+                <span class="font-bold text-slate-800">Chunk #3 (420 chars)</span>
+                <span>Fixed Split</span>
+              </div>
+              <p class="text-slate-700 leading-relaxed">${sampleDoc[2]}</p>
+            </div>
+            <div class="mt-3 text-[11px] text-emerald-600 font-mono">✓ Token Length: 52</div>
+          </div>
+        `;
+      } else {
+        btnSemantic.className = "px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white";
+        btnSimple.className = "px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700";
+        
+        container.innerHTML = `
+          <div class="p-4 rounded-lg bg-blue-50/60 border border-blue-200 text-xs flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
+                <span class="font-bold text-slate-900">Topic: Remote Work Policy</span>
+                <span>Cosine Break @ 0.82</span>
+              </div>
+              <p class="text-slate-800 leading-relaxed">${sampleDoc[0]}</p>
+            </div>
+            <div class="mt-3 text-[11px] text-blue-700 font-mono">✓ Semantic Boundary Preserved</div>
+          </div>
+          <div class="p-4 rounded-lg bg-blue-50/60 border border-blue-200 text-xs flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
+                <span class="font-bold text-slate-900">Topic: Paid Time Off (PTO)</span>
+                <span>Cosine Break @ 0.79</span>
+              </div>
+              <p class="text-slate-800 leading-relaxed">${sampleDoc[1]}</p>
+            </div>
+            <div class="mt-3 text-[11px] text-blue-700 font-mono">✓ Semantic Boundary Preserved</div>
+          </div>
+          <div class="p-4 rounded-lg bg-blue-50/60 border border-blue-200 text-xs flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
+                <span class="font-bold text-slate-900">Topic: Professional Development</span>
+                <span>Cosine Break @ 0.85</span>
+              </div>
+              <p class="text-slate-800 leading-relaxed">${sampleDoc[2]}</p>
+            </div>
+            <div class="mt-3 text-[11px] text-blue-700 font-mono">✓ Semantic Boundary Preserved</div>
+          </div>
+        `;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setChunkerMode('simple');
+    });
+  </script>
+</body>
+</html>
