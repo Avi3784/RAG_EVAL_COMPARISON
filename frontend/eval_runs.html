@@ -32,27 +32,47 @@
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .glass-card {
-      background: rgba(255, 255, 255, 0.9);
+    
+    .spotlight-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(226, 232, 240, 0.8);
+      border: 1px solid rgba(226, 232, 240, 0.9);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
     }
-    .glass-card:hover {
-      border-color: rgba(203, 213, 225, 1);
+    .spotlight-card::before {
+      content: '';
+      position: absolute;
+      top: var(--mouse-y, 0);
+      left: var(--mouse-x, 0);
+      transform: translate(-50%, -50%);
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .spotlight-card:hover::before { opacity: 1; }
+    .spotlight-card:hover {
+      border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
-      box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
     }
   </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+
+  <!-- Interactive Background Canvas -->
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
 
   <!-- Top Navigation -->
   <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:scale-105 transition-transform">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
           <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
@@ -61,31 +81,31 @@
         <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
           <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
           <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Strategies</a>
-          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md">Evaluation Runs</a>
+          <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Evaluation Runs</a>
           <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <span class="text-xs font-mono text-slate-500">Judge: Groq Llama-3.3-70B</span>
+        <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">Judge: Groq Llama-3.3-70B</span>
       </div>
     </div>
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
       <div>
         <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 mb-2">
-          <i data-lucide="line-chart" class="w-3.5 h-3.5"></i>
+          <i data-lucide="line-chart" class="w-3.5 h-3.5 text-purple-500 animate-pulse"></i>
           <span>Ragas Metric Scorecards</span>
         </div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-900">Historical Evaluation Runs</h1>
         <p class="text-sm text-slate-500 mt-1">Multi-dimensional evaluation results across test runs and golden dataset cases.</p>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="window.location.reload()" class="px-3.5 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:border-slate-300 shadow-xs flex items-center gap-1.5">
+        <button onclick="window.location.reload()" class="px-3.5 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:border-slate-300 shadow-xs flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all">
           <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
           <span>Refresh Results</span>
         </button>
@@ -96,7 +116,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
       <!-- Radar Chart (5 cols) -->
-      <div class="lg:col-span-5 glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="lg:col-span-5 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <h2 class="text-base font-semibold text-slate-900">Performance Radar</h2>
           <p class="text-xs text-slate-500 mt-0.5">Hybrid Search vs Simple Baseline</p>
@@ -111,14 +131,14 @@
       </div>
 
       <!-- Line History Chart (7 cols) -->
-      <div class="lg:col-span-7 glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="lg:col-span-7 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <h2 class="text-base font-semibold text-slate-900">Precision & Recall Over Commits</h2>
+              <h2 class="text-base font-semibold text-slate-900">Precision &amp; Recall Over Commits</h2>
               <p class="text-xs text-slate-500 mt-0.5">Automated CI/CD evaluation history</p>
             </div>
-            <span class="text-xs font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Passing (1.00)</span>
+            <span class="text-xs font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 font-bold">Passing (1.00)</span>
           </div>
           <div class="h-64 mt-4 relative">
             <canvas id="historyChart"></canvas>
@@ -133,13 +153,13 @@
     </div>
 
     <!-- Golden Dataset Test Cases Table -->
-    <div class="glass-card rounded-xl p-6 shadow-xs">
+    <div class="spotlight-card rounded-xl p-6 shadow-xs">
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
         <div>
           <h2 class="text-base font-semibold text-slate-900">Golden Dataset Evaluation Cases (5/5)</h2>
           <p class="text-xs text-slate-500 mt-0.5">Individual question scores evaluated by Ragas against `data/golden_dataset.json`</p>
         </div>
-        <span class="text-xs font-mono bg-slate-100 text-slate-700 px-2.5 py-1 rounded">100% Pass Rate</span>
+        <span class="text-xs font-mono bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded border border-emerald-200">100% Pass Rate</span>
       </div>
 
       <div class="overflow-x-auto mt-4">
@@ -154,35 +174,35 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 text-slate-700">
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="hover:bg-slate-50 transition-colors">
               <td class="py-3 font-medium text-slate-900">How many days a week can employees work remotely?</td>
               <td class="py-3 font-mono text-[11px] text-slate-500">Hybrid (BM25+Chroma)</td>
               <td class="py-3 text-right font-mono font-semibold text-slate-900">0.95</td>
               <td class="py-3 text-right font-mono font-semibold text-emerald-600">1.00</td>
               <td class="py-3 text-right"><span class="px-2 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 rounded border border-emerald-200">PASS</span></td>
             </tr>
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="hover:bg-slate-50 transition-colors">
               <td class="py-3 font-medium text-slate-900">What are the core hours when working remotely?</td>
               <td class="py-3 font-mono text-[11px] text-slate-500">Hybrid (BM25+Chroma)</td>
               <td class="py-3 text-right font-mono font-semibold text-slate-900">0.92</td>
               <td class="py-3 text-right font-mono font-semibold text-emerald-600">1.00</td>
               <td class="py-3 text-right"><span class="px-2 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 rounded border border-emerald-200">PASS</span></td>
             </tr>
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="hover:bg-slate-50 transition-colors">
               <td class="py-3 font-medium text-slate-900">How many days of paid time off (PTO) do full-time employees get?</td>
               <td class="py-3 font-mono text-[11px] text-slate-500">Hybrid (BM25+Chroma)</td>
               <td class="py-3 text-right font-mono font-semibold text-slate-900">0.96</td>
               <td class="py-3 text-right font-mono font-semibold text-emerald-600">1.00</td>
               <td class="py-3 text-right"><span class="px-2 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 rounded border border-emerald-200">PASS</span></td>
             </tr>
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="hover:bg-slate-50 transition-colors">
               <td class="py-3 font-medium text-slate-900">Does unused PTO roll over to the next year?</td>
               <td class="py-3 font-mono text-[11px] text-slate-500">Hybrid (BM25+Chroma)</td>
               <td class="py-3 text-right font-mono font-semibold text-slate-900">0.90</td>
               <td class="py-3 text-right font-mono font-semibold text-emerald-600">1.00</td>
               <td class="py-3 text-right"><span class="px-2 py-0.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 rounded border border-emerald-200">PASS</span></td>
             </tr>
-            <tr class="hover:bg-slate-50/80 transition-colors">
+            <tr class="hover:bg-slate-50 transition-colors">
               <td class="py-3 font-medium text-slate-900">What is the annual stipend for professional development?</td>
               <td class="py-3 font-mono text-[11px] text-slate-500">Hybrid (BM25+Chroma)</td>
               <td class="py-3 text-right font-mono font-semibold text-slate-900">0.98</td>
@@ -198,6 +218,69 @@
 
   <script>
     lucide.createIcons();
+
+    // Mouse Spotlight Effect on cards
+    document.querySelectorAll('.spotlight-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+    });
+
+    // Vector Network Particle Animation
+    const canvas = document.getElementById('vectorCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    for (let i = 0; i < 30; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 2 + 1.5
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
 
     // Radar Chart
     const ctxRadar = document.getElementById('radarChart').getContext('2d');

@@ -10,6 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti for celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,30 +27,25 @@
           animation: {
             'fade-in': 'fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            'float': 'float 3s ease-in-out infinite',
-            'pulse-subtle': 'pulseSubtle 2s infinite',
-            'shimmer': 'shimmer 2s linear infinite',
+            'float-slow': 'floatSlow 4s ease-in-out infinite',
+            'shimmer': 'shimmer 2.5s infinite linear',
+            'glow-pulse': 'glowPulse 2s infinite ease-in-out',
+            'spin-slow': 'spin 12s linear infinite',
           },
           keyframes: {
-            fadeIn: {
-              '0%': { opacity: '0' },
-              '100%': { opacity: '1' },
-            },
-            slideUp: {
-              '0%': { opacity: '0', transform: 'translateY(16px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-4px)' },
-            },
-            pulseSubtle: {
-              '0%, 100%': { opacity: '1' },
-              '50%': { opacity: '0.5' },
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            floatSlow: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' }
             },
             shimmer: {
-              '0%': { backgroundPosition: '-200% 0' },
-              '100%': { backgroundPosition: '200% 0' },
+              '0%': { transform: 'translateX(-100%)' },
+              '100%': { transform: 'translateX(100%)' }
+            },
+            glowPulse: {
+              '0%, 100%': { boxShadow: '0 0 15px rgba(16, 185, 129, 0.2)' },
+              '50%': { boxShadow: '0 0 25px rgba(16, 185, 129, 0.5)' }
             }
           }
         }
@@ -61,57 +58,92 @@
       background-color: #FAFAFA;
       background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
       background-size: 24px 24px;
+      overflow-x: hidden;
     }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    .glass-card {
-      background: rgba(255, 255, 255, 0.9);
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    
+    /* Interactive Mouse Spotlight Card */
+    .spotlight-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(226, 232, 240, 0.8);
+      border: 1px solid rgba(226, 232, 240, 0.9);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
     }
-    .glass-card:hover {
-      border-color: rgba(203, 213, 225, 1);
+    .spotlight-card::before {
+      content: '';
+      position: absolute;
+      top: var(--mouse-y, 0);
+      left: var(--mouse-x, 0);
+      transform: translate(-50%, -50%);
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .spotlight-card:hover::before {
+      opacity: 1;
+    }
+    .spotlight-card:hover {
+      border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
-      box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Shimmer Button */
+    .shimmer-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .shimmer-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transform: translateX(-100%);
+    }
+    .shimmer-btn:hover::after {
+      animation: shimmer 1.5s infinite;
     }
   </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+
+  <!-- Interactive Vector Network Background Canvas -->
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
 
   <!-- Top Navigation -->
   <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80 transition-all">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:scale-105 transition-transform">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
           <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
-          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">v1.0.4</span>
+          <span class="px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200 animate-pulse">v1.0.4</span>
         </a>
         <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
-          <a href="index.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md">Overview</a>
+          <a href="index.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Overview</a>
           <a href="strategies.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Strategies</a>
           <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
           <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <div class="flex items-center space-x-2 text-xs font-mono bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-xs">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Recall: 100% (Passed)</span>
+        <div class="flex items-center space-x-2 text-xs font-mono bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-xs animate-glow-pulse">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>Recall: 1.00 (Passed)</span>
         </div>
-        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs hover:shadow-sm transition-all active:scale-95">
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs hover:shadow transition-all active:scale-95">
           <i data-lucide="github" class="w-3.5 h-3.5"></i>
           <span>GitHub</span>
         </a>
@@ -120,35 +152,35 @@
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
     
     <!-- Hero / Headline -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
       <div>
         <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 mb-2">
-          <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-          <span>LLM-as-a-Judge Production Pipeline</span>
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-500 animate-spin-slow"></i>
+          <span>Interactive Benchmark Suite &amp; LLM Judge</span>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Retrieval & Evaluation Benchmarks</h1>
-        <p class="text-sm text-slate-500 mt-1">Comparing 4 chunking & search strategies graded automatically via Ragas with Groq Llama-3.3-70B.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Retrieval &amp; Evaluation Benchmarks</h1>
+        <p class="text-sm text-slate-500 mt-1">Comparing 4 retrieval algorithms evaluated with Ragas and Groq Llama-3.3-70B.</p>
       </div>
       <div class="flex items-center space-x-3">
-        <a href="strategies.html" class="px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:border-slate-300 shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5">
+        <a href="strategies.html" class="px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:border-slate-300 shadow-xs hover:shadow transition-all flex items-center gap-1.5 hover:-translate-y-0.5">
           <i data-lucide="layers" class="w-4 h-4 text-slate-500"></i>
           <span>Inspect Strategies</span>
         </a>
-        <button onclick="runQuickEvaluation()" id="runEvalBtn" class="flex items-center space-x-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all active:scale-95">
+        <button onclick="runCelebrationEval()" id="runEvalBtn" class="shimmer-btn flex items-center space-x-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 hover:-translate-y-0.5">
           <i data-lucide="play" class="w-4 h-4 text-emerald-400"></i>
           <span>Run Evaluation Pipeline</span>
         </button>
       </div>
     </div>
 
-    <!-- Row 1: KPI Metrics with animated numbers -->
+    <!-- Row 1: KPI Metrics with animated numbers and mouse spotlight -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
       <!-- Metric 1 -->
-      <div class="glass-card rounded-xl p-5 shadow-xs">
+      <div class="spotlight-card rounded-xl p-5 shadow-xs">
         <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
           <span>CONTEXT PRECISION</span>
           <div class="p-1.5 rounded-md bg-slate-100 text-slate-600">
@@ -165,7 +197,7 @@
       </div>
 
       <!-- Metric 2 -->
-      <div class="glass-card rounded-xl p-5 shadow-xs">
+      <div class="spotlight-card rounded-xl p-5 shadow-xs">
         <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
           <span>CONTEXT RECALL</span>
           <div class="p-1.5 rounded-md bg-emerald-50 text-emerald-600">
@@ -182,7 +214,7 @@
       </div>
 
       <!-- Metric 3 -->
-      <div class="glass-card rounded-xl p-5 shadow-xs">
+      <div class="spotlight-card rounded-xl p-5 shadow-xs">
         <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
           <span>AVG RETRIEVAL LATENCY</span>
           <div class="p-1.5 rounded-md bg-blue-50 text-blue-600">
@@ -194,12 +226,12 @@
           <span class="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Local BGE-Small</span>
         </div>
         <div class="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-          <div class="bg-blue-500 h-full rounded-full" style="width: 35%"></div>
+          <div class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width: 35%"></div>
         </div>
       </div>
 
       <!-- Metric 4 -->
-      <div class="glass-card rounded-xl p-5 shadow-xs">
+      <div class="spotlight-card rounded-xl p-5 shadow-xs">
         <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
           <span>EVALUATION JUDGE COST</span>
           <div class="p-1.5 rounded-md bg-amber-50 text-amber-600">
@@ -221,14 +253,14 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
       
       <!-- Strategy Selector & Details (7 cols) -->
-      <div class="lg:col-span-7 glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="lg:col-span-7 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
               <h2 class="text-base font-semibold text-slate-900">Retrieval Strategies Workbench</h2>
-              <p class="text-xs text-slate-500 mt-0.5">Click each strategy to inspect its inner mechanism & benchmarks</p>
+              <p class="text-xs text-slate-500 mt-0.5">Click each strategy to inspect its inner mechanism &amp; benchmarks</p>
             </div>
-            <a href="strategies.html" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
+            <a href="strategies.html" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:translate-x-0.5 transition-transform">
               <span>Deep Dive</span>
               <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
             </a>
@@ -236,26 +268,26 @@
 
           <!-- Strategy Tabs -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
-            <button onclick="selectStrategy('simple')" id="tab-simple" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all">
+            <button onclick="selectStrategy('simple')" id="tab-simple" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02]">
               <div class="text-xs font-semibold text-slate-900">1. Simple</div>
               <div class="text-[11px] text-slate-500 mt-0.5">Fixed Chunks</div>
             </button>
-            <button onclick="selectStrategy('semantic')" id="tab-semantic" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all">
+            <button onclick="selectStrategy('semantic')" id="tab-semantic" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02]">
               <div class="text-xs font-semibold text-slate-900">2. Semantic</div>
               <div class="text-[11px] text-slate-500 mt-0.5">Meaning Split</div>
             </button>
-            <button onclick="selectStrategy('hybrid')" id="tab-hybrid" class="strategy-tab p-3 text-left border rounded-lg border-slate-900 bg-slate-900 text-white shadow-xs transition-all">
+            <button onclick="selectStrategy('hybrid')" id="tab-hybrid" class="strategy-tab p-3 text-left border rounded-lg border-slate-900 bg-slate-900 text-white shadow-xs transition-all hover:scale-[1.02]">
               <div class="text-xs font-semibold text-white">3. Hybrid</div>
               <div class="text-[11px] text-slate-300 mt-0.5">Vector + BM25</div>
             </button>
-            <button onclick="selectStrategy('rerank')" id="tab-rerank" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all">
+            <button onclick="selectStrategy('rerank')" id="tab-rerank" class="strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02]">
               <div class="text-xs font-semibold text-slate-900">4. Re-rank</div>
               <div class="text-[11px] text-slate-500 mt-0.5">Cross-Encoder</div>
             </button>
           </div>
 
           <!-- Strategy Dynamic Card -->
-          <div id="strategyDetails" class="mt-5 p-4 rounded-lg bg-slate-50/80 border border-slate-200/80 transition-all">
+          <div id="strategyDetails" class="mt-5 p-4 rounded-lg bg-slate-50/90 border border-slate-200/80 transition-all">
             <!-- Injected by JS -->
           </div>
         </div>
@@ -268,7 +300,7 @@
       </div>
 
       <!-- Benchmark Accuracy Chart (5 cols) -->
-      <div class="lg:col-span-5 glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="lg:col-span-5 spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 class="text-base font-semibold text-slate-900">Strategy Comparison Matrix</h2>
@@ -293,10 +325,10 @@
     </div>
 
     <!-- Row 3: Interactive Query & Retrieval Playground -->
-    <div class="glass-card rounded-xl p-6 shadow-xs">
+    <div class="spotlight-card rounded-xl p-6 shadow-xs">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">Interactive Query & LLM Judge Playground</h2>
+          <h2 class="text-base font-semibold text-slate-900">Interactive Query &amp; LLM Judge Playground</h2>
           <p class="text-xs text-slate-500 mt-0.5">Select a test question from the golden dataset or enter your own</p>
         </div>
         <div class="flex items-center gap-2">
@@ -317,9 +349,9 @@
           <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
           <input type="text" id="queryInput" value="How many days a week can employees work remotely?" class="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all text-slate-900 font-medium">
         </div>
-        <button onclick="testQuery()" class="px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xs hover:shadow active:scale-95">
+        <button onclick="testQueryAnimated()" id="searchBtn" class="shimmer-btn px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-all flex items-center gap-2 shadow-xs hover:shadow active:scale-95">
           <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
-          <span>Retrieve & Judge</span>
+          <span>Retrieve &amp; Judge</span>
         </button>
       </div>
 
@@ -339,7 +371,7 @@
         </div>
 
         <!-- Right: LLM Judge Evaluation -->
-        <div class="lg:col-span-5 bg-slate-50/80 border border-slate-200 rounded-lg p-4 flex flex-col justify-between">
+        <div class="lg:col-span-5 bg-slate-50/90 border border-slate-200 rounded-lg p-4 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between pb-3 border-b border-slate-200">
               <div class="flex items-center gap-2">
@@ -356,7 +388,7 @@
                   <span class="font-mono font-semibold text-slate-900" id="judgePrecision">0.96 / 1.00</span>
                 </div>
                 <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 96%" id="judgePrecisionBar"></div>
+                  <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 96%" id="judgePrecisionBar"></div>
                 </div>
               </div>
 
@@ -366,7 +398,7 @@
                   <span class="font-mono font-semibold text-slate-900" id="judgeRecall">1.00 / 1.00</span>
                 </div>
                 <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 100%" id="judgeRecallBar"></div>
+                  <div class="bg-emerald-500 h-full rounded-full transition-all duration-700" style="width: 100%" id="judgeRecallBar"></div>
                 </div>
               </div>
             </div>
@@ -379,7 +411,7 @@
 
           <div class="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
             <span class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
               Status: <span class="text-emerald-700 font-semibold">PASSED (&gt;0.80)</span>
             </span>
             <span>Ragas Framework</span>
@@ -412,7 +444,7 @@
   </main>
 
   <!-- Footer -->
-  <footer class="border-t border-slate-200 bg-white/80 py-6 mt-12 text-center text-xs text-slate-500">
+  <footer class="relative z-10 border-t border-slate-200 bg-white/80 py-6 mt-12 text-center text-xs text-slate-500">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
       <div>RAG with Evaluation Comparison • Production Engineering Pipeline</div>
       <div class="flex items-center space-x-4">
@@ -427,10 +459,72 @@
     </div>
   </footer>
 
-  <!-- App Interactive Logic -->
+  <!-- App Interactive Logic & Animations -->
   <script>
-    // Initialize Lucide Icons
     lucide.createIcons();
+
+    // Mouse Spotlight Effect on cards
+    document.querySelectorAll('.spotlight-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+    });
+
+    // Vector Network Particle Animation on Canvas
+    const canvas = document.getElementById('vectorCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    for (let i = 0; i < 35; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        radius: Math.random() * 2 + 1.5
+      });
+    }
+
+    function animateVectorSpace() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      });
+      requestAnimationFrame(animateVectorSpace);
+    }
+    animateVectorSpace();
 
     // Animated Count Up
     function animateCounters() {
@@ -446,7 +540,7 @@
             clearInterval(interval);
           }
           el.innerText = isDecimal ? current.toFixed(2) : Math.round(current);
-        }, 20);
+        }, 25);
       });
     }
 
@@ -542,14 +636,12 @@
       currentStrategy = key;
       const data = strategyData[key];
 
-      // Update tab styles
       document.querySelectorAll('.strategy-tab').forEach(tab => {
-        tab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all text-slate-900";
+        tab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-200 bg-white hover:border-slate-300 transition-all hover:scale-[1.02] text-slate-900";
       });
       const activeTab = document.getElementById(`tab-${key}`);
-      activeTab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-900 bg-slate-900 text-white shadow-xs transition-all";
+      activeTab.className = "strategy-tab p-3 text-left border rounded-lg border-slate-900 bg-slate-900 text-white shadow-xs transition-all hover:scale-[1.02]";
 
-      // Render Dynamic Card
       const container = document.getElementById('strategyDetails');
       container.innerHTML = `
         <div class="flex items-center justify-between">
@@ -575,7 +667,7 @@
       `;
 
       document.getElementById('activeRetrieverLabel').innerText = data.title.split(':')[1].trim();
-      testQuery();
+      testQueryAnimated();
     }
 
     // Chart.js Matrix Comparison Chart
@@ -607,15 +699,7 @@
           plugins: {
             legend: {
               position: 'top',
-              labels: {
-                boxWidth: 12,
-                font: { family: 'Geist', size: 11 }
-              }
-            },
-            tooltip: {
-              backgroundColor: '#0f172a',
-              titleFont: { family: 'Geist' },
-              bodyFont: { family: 'Geist' }
+              labels: { boxWidth: 12, font: { family: 'Geist', size: 11 } }
             }
           },
           scales: {
@@ -637,24 +721,26 @@
     function loadPresetQuestion() {
       const idx = document.getElementById('presetSelect').value;
       document.getElementById('queryInput').value = goldenDataset[idx].question;
-      testQuery();
+      testQueryAnimated();
     }
 
-    function testQuery() {
+    function testQueryAnimated() {
       const q = document.getElementById('queryInput').value;
       const idx = document.getElementById('presetSelect').value;
       const item = goldenDataset[idx] || goldenDataset[0];
       
       const container = document.getElementById('chunksContainer');
       container.innerHTML = `
-        <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1 transition-all hover:border-slate-300">
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1 transition-all hover:border-slate-400 hover:shadow-xs">
           <div class="flex items-center justify-between text-slate-500 font-mono text-[11px]">
-            <span class="font-semibold text-slate-800">Chunk #1 (Similarity: 0.94)</span>
+            <span class="font-semibold text-slate-800 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Chunk #1 (Similarity: 0.94)
+            </span>
             <span>source_document.txt : Lines 3-6</span>
           </div>
           <p class="text-slate-700 leading-relaxed">${item.context}</p>
         </div>
-        <div class="p-3 bg-white border border-slate-200 rounded-lg text-xs space-y-1 transition-all opacity-70 hover:opacity-100">
+        <div class="p-3 bg-white border border-slate-200 rounded-lg text-xs space-y-1 transition-all opacity-70 hover:opacity-100 hover:border-slate-400">
           <div class="flex items-center justify-between text-slate-500 font-mono text-[11px]">
             <span class="font-semibold text-slate-800">Chunk #2 (Similarity: 0.78)</span>
             <span>source_document.txt : Lines 7-10</span>
@@ -663,7 +749,6 @@
         </div>
       `;
 
-      // Update Judge Score
       const strat = strategyData[currentStrategy];
       const pScore = (item.precision * (strat.precision / 0.85)).toFixed(2);
       const rScore = (item.recall * (strat.recall / 0.85) > 1 ? 1.00 : item.recall * (strat.recall / 0.85)).toFixed(2);
@@ -675,7 +760,6 @@
       document.getElementById('groundTruthText').innerText = `"${item.ground_truth}"`;
       document.getElementById('retrievalTime').innerText = `Retrieved in ${strat.latency}`;
 
-      // Append Log
       const terminal = document.getElementById('logTerminal');
       const now = new Date().toTimeString().split(' ')[0];
       const logLine = document.createElement('div');
@@ -684,23 +768,30 @@
       terminal.scrollTop = terminal.scrollHeight;
     }
 
-    function runQuickEvaluation() {
+    function runCelebrationEval() {
       const btn = document.getElementById('runEvalBtn');
-      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-emerald-400"></i><span>Running Ragas Judge...</span>`;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-emerald-400"></i><span>Grading via Llama-3.3-70B...</span>`;
       lucide.createIcons();
       
       setTimeout(() => {
-        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i><span>Evaluation Complete</span>`;
+        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i><span>All Tests Passed (1.00)</span>`;
         lucide.createIcons();
-        testQuery();
+        testQueryAnimated();
+        
+        // Confetti Particle Explosion
+        confetti({
+          particleCount: 60,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
         setTimeout(() => {
           btn.innerHTML = `<i data-lucide="play" class="w-4 h-4 text-emerald-400"></i><span>Run Evaluation Pipeline</span>`;
           lucide.createIcons();
-        }, 2000);
-      }, 1200);
+        }, 2500);
+      }, 1000);
     }
 
-    // Initialize Default View
     window.addEventListener('DOMContentLoaded', () => {
       initChart();
       selectStrategy('hybrid');

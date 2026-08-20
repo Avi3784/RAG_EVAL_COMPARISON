@@ -32,27 +32,47 @@
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .glass-card {
-      background: rgba(255, 255, 255, 0.9);
+    
+    .spotlight-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(12px);
-      border: 1px solid rgba(226, 232, 240, 0.8);
+      border: 1px solid rgba(226, 232, 240, 0.9);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
     }
-    .glass-card:hover {
-      border-color: rgba(203, 213, 225, 1);
+    .spotlight-card::before {
+      content: '';
+      position: absolute;
+      top: var(--mouse-y, 0);
+      left: var(--mouse-x, 0);
+      transform: translate(-50%, -50%);
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .spotlight-card:hover::before { opacity: 1; }
+    .spotlight-card:hover {
+      border-color: rgba(148, 163, 184, 0.6);
       transform: translateY(-2px);
-      box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.06);
     }
   </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col antialiased selection:bg-slate-900 selection:text-white">
+
+  <!-- Interactive Background Canvas -->
+  <canvas id="vectorCanvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
 
   <!-- Top Navigation -->
   <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-4">
         <a href="index.html" class="flex items-center space-x-2.5 group">
-          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:scale-105 transition-transform">
+          <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-sm font-semibold text-sm group-hover:rotate-6 group-hover:scale-105 transition-all">
             R
           </div>
           <span class="text-base font-semibold tracking-tight text-slate-900">RAG.Eval</span>
@@ -60,13 +80,13 @@
         </a>
         <nav class="hidden md:flex items-center space-x-1 pl-6 border-l border-slate-200">
           <a href="index.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Overview</a>
-          <a href="strategies.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md">Strategies</a>
+          <a href="strategies.html" class="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-100 rounded-md transition-all shadow-xs">Strategies</a>
           <a href="eval_runs.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">Evaluation Runs</a>
           <a href="cicd.html" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all">CI/CD Guardrails</a>
         </nav>
       </div>
       <div class="flex items-center space-x-3">
-        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all">
+        <a href="https://github.com/Avi3784/RAG_EVAL_COMPARISON" target="_blank" class="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-md shadow-xs transition-all hover:scale-105 active:scale-95">
           <i data-lucide="github" class="w-3.5 h-3.5"></i>
           <span>GitHub Repo</span>
         </a>
@@ -75,20 +95,20 @@
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
       <div>
         <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
           <span>4 Production Implementations</span>
         </div>
         <h1 class="text-2xl font-bold tracking-tight text-slate-900">Retrieval Strategies Deep Dive</h1>
         <p class="text-sm text-slate-500 mt-1">Explore how each chunking and retrieval algorithm functions in Python and LangChain.</p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xs text-slate-500 font-mono">rag_pipeline.py</span>
+        <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2.5 py-1 rounded border border-slate-200">rag_pipeline.py</span>
       </div>
     </div>
 
@@ -96,7 +116,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       
       <!-- Strategy 1 -->
-      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 01</span>
@@ -105,10 +125,10 @@
           <h2 class="text-lg font-bold text-slate-900 mt-2">Simple Chunking</h2>
           <p class="text-xs text-slate-500 font-mono mt-0.5">RecursiveCharacterTextSplitter</p>
           <p class="text-xs text-slate-600 mt-3 leading-relaxed">
-            Splits text into fixed size chunks (500 chars) with a sliding window overlap (50 chars). It searches ChromaDB using cosine distance.
+            Splits text into fixed size chunks (500 chars) with a sliding window overlap (50 chars). Searches ChromaDB using cosine distance.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
             <pre><code>text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=500,
     chunk_overlap=50
@@ -135,7 +155,7 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
       </div>
 
       <!-- Strategy 2 -->
-      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 02</span>
@@ -147,7 +167,7 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
             Evaluates consecutive sentences using embedding distances. Splits text only where a topic shift or contextual break occurs.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
             <pre><code>text_splitter = SemanticChunker(
     embeddings=self.embeddings
 )
@@ -173,7 +193,7 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
       </div>
 
       <!-- Strategy 3 -->
-      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between border-slate-900/40">
+      <div class="spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between border-slate-900/30">
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 03</span>
@@ -185,7 +205,7 @@ retriever = vectorstore.as_retriever(k=3)</code></pre>
             Combines dense vector search (meaning/concepts) with sparse BM25 (exact keyword match) using 50/50 reciprocal rank fusion.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
             <pre><code>ensemble = EnsembleRetriever(
     retrievers=[vector_retriever, bm25_retriever],
     weights=[0.5, 0.5]
@@ -211,7 +231,7 @@ return ensemble</code></pre>
       </div>
 
       <!-- Strategy 4 -->
-      <div class="glass-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
+      <div class="spotlight-card rounded-xl p-6 shadow-xs flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold font-mono text-slate-400">STRATEGY 04</span>
@@ -223,7 +243,7 @@ return ensemble</code></pre>
             Fetches a broad top-10 candidate pool from Chroma, then uses a HuggingFace cross-encoder model to re-score and keep the top 2.
           </p>
 
-          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto">
+          <div class="mt-4 p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs overflow-x-auto shadow-inner">
             <pre><code>model = HuggingFaceCrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 compressor = CrossEncoderReranker(model=model, top_n=2)
 return ContextualCompressionRetriever(
@@ -250,16 +270,16 @@ return ContextualCompressionRetriever(
 
     </div>
 
-    <!-- Live Interactive Chunking Simulator -->
-    <div class="glass-card rounded-xl p-6 shadow-xs">
+    <!-- Live Interactive Chunking Simulator with Smooth Tag Animations -->
+    <div class="spotlight-card rounded-xl p-6 shadow-xs">
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
         <div>
           <h2 class="text-base font-semibold text-slate-900">Interactive Document Chunking Visualizer</h2>
           <p class="text-xs text-slate-500 mt-0.5">See how raw text is partitioned into vector embeddings under different algorithms</p>
         </div>
         <div class="flex gap-2">
-          <button onclick="setChunkerMode('simple')" id="mode-simple" class="px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white">Fixed Chunker</button>
-          <button onclick="setChunkerMode('semantic')" id="mode-semantic" class="px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700">Semantic Chunker</button>
+          <button onclick="setChunkerMode('simple')" id="mode-simple" class="px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white shadow-xs transition-all hover:scale-105 active:scale-95">Fixed Chunker</button>
+          <button onclick="setChunkerMode('semantic')" id="mode-semantic" class="px-3.5 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95">Semantic Chunker</button>
         </div>
       </div>
 
@@ -273,6 +293,69 @@ return ContextualCompressionRetriever(
   <script>
     lucide.createIcons();
 
+    // Mouse Spotlight Effect on cards
+    document.querySelectorAll('.spotlight-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+    });
+
+    // Vector Network Particle Animation
+    const canvas = document.getElementById('vectorCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const particles = [];
+    for (let i = 0; i < 30; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        radius: Math.random() * 2 + 1.5
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.3)';
+
+      particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > width) p.vx *= -1;
+        if (p.y < 0 || p.y > height) p.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+
     const sampleDoc = [
       "Employees at Acme Corp are allowed to work remotely up to three days a week. We believe in a flexible work environment that promotes work-life balance. However, employees must be available during core hours, which are from 10:00 AM to 3:00 PM in their local time zone.",
       "All full-time employees are entitled to 20 days of paid time off per calendar year. This PTO can be used for vacation, personal days, or sick leave. Unused PTO does not roll over to the next year, so we encourage everyone to use their time.",
@@ -285,75 +368,75 @@ return ContextualCompressionRetriever(
       const btnSemantic = document.getElementById('mode-semantic');
 
       if (mode === 'simple') {
-        btnSimple.className = "px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white";
-        btnSemantic.className = "px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700";
+        btnSimple.className = "px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white shadow-xs transition-all hover:scale-105 active:scale-95";
+        btnSemantic.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95";
         
         container.innerHTML = `
-          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between">
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all">
             <div>
               <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
                 <span class="font-bold text-slate-800">Chunk #1 (480 chars)</span>
-                <span>Fixed Split</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">Fixed Split</span>
               </div>
               <p class="text-slate-700 leading-relaxed">${sampleDoc[0]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-emerald-600 font-mono">✓ Token Length: 64</div>
+            <div class="mt-3 text-[11px] text-emerald-600 font-mono font-semibold">✓ Token Length: 64</div>
           </div>
-          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between">
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all">
             <div>
               <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
                 <span class="font-bold text-slate-800">Chunk #2 (460 chars)</span>
-                <span>Fixed Split</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">Fixed Split</span>
               </div>
               <p class="text-slate-700 leading-relaxed">${sampleDoc[1]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-emerald-600 font-mono">✓ Token Length: 58</div>
+            <div class="mt-3 text-[11px] text-emerald-600 font-mono font-semibold">✓ Token Length: 58</div>
           </div>
-          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between">
+          <div class="p-4 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-col justify-between hover:border-slate-300 hover:shadow-xs transition-all">
             <div>
               <div class="flex justify-between items-center text-[11px] font-mono text-slate-500 mb-2">
                 <span class="font-bold text-slate-800">Chunk #3 (420 chars)</span>
-                <span>Fixed Split</span>
+                <span class="px-1.5 py-0.5 bg-slate-200 rounded text-[10px]">Fixed Split</span>
               </div>
               <p class="text-slate-700 leading-relaxed">${sampleDoc[2]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-emerald-600 font-mono">✓ Token Length: 52</div>
+            <div class="mt-3 text-[11px] text-emerald-600 font-mono font-semibold">✓ Token Length: 52</div>
           </div>
         `;
       } else {
-        btnSemantic.className = "px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white";
-        btnSimple.className = "px-3 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700";
+        btnSemantic.className = "px-3.5 py-1.5 text-xs font-semibold rounded-md bg-slate-900 text-white shadow-xs transition-all hover:scale-105 active:scale-95";
+        btnSimple.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white border border-slate-200 text-slate-700 hover:border-slate-300 shadow-xs transition-all hover:scale-105 active:scale-95";
         
         container.innerHTML = `
-          <div class="p-4 rounded-lg bg-blue-50/60 border border-blue-200 text-xs flex flex-col justify-between">
+          <div class="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-xs transition-all">
             <div>
               <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
-                <span class="font-bold text-slate-900">Topic: Remote Work Policy</span>
-                <span>Cosine Break @ 0.82</span>
+                <span class="font-bold text-slate-900">Topic: Remote Work</span>
+                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]">Cosine 0.82</span>
               </div>
               <p class="text-slate-800 leading-relaxed">${sampleDoc[0]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-blue-700 font-mono">✓ Semantic Boundary Preserved</div>
+            <div class="mt-3 text-[11px] text-blue-700 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
           </div>
-          <div class="p-4 rounded-lg bg-blue-50/60 border border-blue-200 text-xs flex flex-col justify-between">
+          <div class="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-xs transition-all">
             <div>
               <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
-                <span class="font-bold text-slate-900">Topic: Paid Time Off (PTO)</span>
-                <span>Cosine Break @ 0.79</span>
+                <span class="font-bold text-slate-900">Topic: Paid Time Off</span>
+                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]">Cosine 0.79</span>
               </div>
               <p class="text-slate-800 leading-relaxed">${sampleDoc[1]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-blue-700 font-mono">✓ Semantic Boundary Preserved</div>
+            <div class="mt-3 text-[11px] text-blue-700 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
           </div>
-          <div class="p-4 rounded-lg bg-blue-50/60 border border-blue-200 text-xs flex flex-col justify-between">
+          <div class="p-4 rounded-lg bg-blue-50/70 border border-blue-200 text-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-xs transition-all">
             <div>
               <div class="flex justify-between items-center text-[11px] font-mono text-blue-700 mb-2">
-                <span class="font-bold text-slate-900">Topic: Professional Development</span>
-                <span>Cosine Break @ 0.85</span>
+                <span class="font-bold text-slate-900">Topic: Stipends</span>
+                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px]">Cosine 0.85</span>
               </div>
               <p class="text-slate-800 leading-relaxed">${sampleDoc[2]}</p>
             </div>
-            <div class="mt-3 text-[11px] text-blue-700 font-mono">✓ Semantic Boundary Preserved</div>
+            <div class="mt-3 text-[11px] text-blue-700 font-mono font-semibold">✓ Semantic Boundary Preserved</div>
           </div>
         `;
       }
